@@ -1,0 +1,7 @@
+target_CN: 30 #target amplicon CN
+ecdna_target_size: 1500000 #target ecDNA mode amplicon size in bp
+viral_amp_target_size: 15000 #target viralAmp mode amplicon size in bp
+viral_strain: "hpv16.fasta"
+num_intervals: 1 #number of non-overlapping genomic regions to generate an amplicon with
+integration_proportion: 0 #from 0 to 1. 0 indicates no integration
+ecDNA_heterogeneity: [1, ] #no heterogeneity. Can try [0.5, 0.25, 0.25] for a 2:1:1 ratio
