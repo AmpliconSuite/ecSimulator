@@ -1,167 +1,151 @@
-#!/usr/bin/env python3
-import sys
-import os
-import copy
-import yaml
-import bisect
-import argparse
-import numpy as np
-from itertools import groupby
-from collections import defaultdict
-from intervaltree import Interval, IntervalTree
+#!/usr/bin/env python
 
+__version__ = "0.1"
+__author__ = "Jens Luebeck"
+
+import os
+import yaml
+import argparse
+
+from ecSim_IO import *
+from ecSim_sv_gen import *
+
+min_segment_size = 1000
+min_interval_size = 10000
+max_interval_size = 20000000
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 PROG_DIR = SRC_DIR[:SRC_DIR.rindex('/')]
 LC_DIR = PROG_DIR + "/low_comp_regions/"
 
-print(SRC_DIR,PROG_DIR,LC_DIR)
 
-class gInterval(object):
-    def __init__(self,chrom,start,end,seq):
-        self.chrom = chrom
-        self.start = start
-        self.end = end
-        self.seq = seq
-        self.size = abs(self.end - self.start)
-
-    def to_string(self):
-        return self.chrom + ":" + str(self.start) + "-" + str(self.end) + " | " + str(self.size)
-
-#--------------------------------------------------------------------
-#IO METHODS
-
-#read the excludable region database
-#return a dictionary of interval trees
-def read_excludedRegions(cent_file,map_exc_file):
-    excIT = defaultdict(IntervalTree)
-    with open(exc_file) as infile:
-        for line in infile:
-            fields = line.rstrip().rsplit("\t")
-            fields[1],fields[2] = int(fields[1]),int(fields[2])
-            excIT[fields[0]].add(Interval(fields[1],fields[2]))
-
-    return excIT
-
-
-#fasta parsing, derived from brent pedersen
-#https://www.biostars.org/p/710/
-def readFasta(fname,chrSet):
-    seqD = {}
-    seqStartIndices = []
-    with open(fname) as infile:
-        currPos = 0
-        faiter = (x[1] for x in groupby(infile, lambda line: line[0] == ">"))
-        for header in faiter:
-            name = header.__next__()[1:].strip()
-            if name in chrSet:
-                seq = "".join(s.strip() for s in faiter.__next__())
-                seqD[name] = seq
-                seqStartIndices.append((name,currPos))
-                currPos+=len(seq)
-
-    return seqD,seqStartIndices,currPos
-
-def readChromSet(fname):
-    return set(line.strip() for line in open(fname))
-
-#---------------------------------------------------------------------
-def compute_interval_sizes(num_segs,target_size,min_seg_size = 100000):
-    interval_sizes = []
-    df = num_segs - 1
-    remaining_space = target_size
-    while df > 0:
-        if (remaining_space - min_seg_size < 2*min_seg_size):
-            print("Remaining space too small. Increasing target amplicon size.")
-            remaining_space+=(3*min_seg_size)
-
-        loc = np.random.randint(min_seg_size,remaining_space - min_seg_size)
-        currSegSize = min(loc, remaining_space - loc)
-        interval_sizes.append(currSegSize)
-        remaining_space -= currSegSize
-        df-=1
-
-    interval_sizes.append(remaining_space)
-    return interval_sizes
-
-
-def compute_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT):
-    intervals = []
-    chrom_snames, chrom_sposns = zip(*seqStartInds)
-    for s in interval_sizes:
-        foundInt = False
-        iters = 0
-        while not foundInt and iters < 10000:
-            iters+=1
-            #pull a random number from the ref.
-            spos = np.random.randint(0,ref_gsize - s)
-            sposn_index = bisect.bisect_left(chrom_sposns,spos) - 1
-            schrom = chrom_snames[sposn_index]
-            epos = spos + s
-            if epos < chrom_sposns[sposn_index + 1]:
-                #lookup the sequence
-                normStart = spos - chrom_sposns[sposn_index]
-                normEnd = epos - chrom_sposns[sposn_index]
-                if not excIT[schrom][normStart:normEnd]:
-                    currSeq = seqD[schrom][normStart:normEnd]
-                    if not "N" in currSeq:
-                        foundInt = True
-                        intervals.append(gInterval(schrom,normStart,normEnd,currSeq))
-
-    return intervals
-
-
-
-#---------------------------------------------------------------------
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Simulate focal amplifications such as ecDNA "
                                                  "or virally-mediated amplicons.")
     parser.add_argument("--ref_name", help="Reference genome version.", choices=["hg19", "GRCh37", "GRCh38"], required=True)
     parser.add_argument("--ref_fasta", help="Reference genome fasta.", required=True)
-    parser.add_argument("--mode", help="Type of amplicon to simulate.", choices=["ecDNA","viralAmp"], default="ecDNA")
+    parser.add_argument("--mode", help="Type of amplicon to simulate.", choices=["ecDNA", "BFB"], default="ecDNA")
     parser.add_argument("--config_file", help="Path to config file for run. "
                                               "Will use mode's default params if not provided.")
     parser.add_argument("-o", "--output_prefix", help="Prefix for output filenames.", required=True)
+    parser.add_argument("-n", "--num_amplicons", help="Number of amplicons to generate.", type=int, default=1)
+    parser.add_argument("-v", "--version", help="Print version and exit.", action='store_true')
     args = parser.parse_args()
+
+    if args.version:
+        print("ecSimulator: version " + __version__)
+        print("author: " + __author__)
+
+    logging.basicConfig(filename=args.output_prefix + '.log',
+        format = '%(asctime)s %(levelname)-8s %(message)s',
+        level = logging.DEBUG,
+        datefmt = '%Y-%m-%d %H:%M:%S',
+        filemode = 'w')
+
+    logging.info("ecSimulator " + __version__)
+    logging.info("Using command line args: ")
+    logging.info(" ".join(sys.argv[1:]))
 
     if not args.config_file:
         args.config_file = SRC_DIR + "/default_config.yaml"
 
+    logging.info("Loading YAML config file from " + args.config_file)
     with open(args.config_file) as f:
-        run_config = yaml.safe_load(f)
+        sim_config = yaml.safe_load(f)
 
-    #get the list of chromosomes for this sample
-    with open(LC_DIR + args.ref_name + "_chroms.txt") as f:
-        chrSet = set(f.read().splitlines())
+    # get the list of chromosomes for this sample
+    chrSet = readChromSet(LC_DIR + args.ref_name + "_chroms.txt")
 
+    # read the low complexity list
+    excIT = read_excludedRegions(LC_DIR + args.ref_name + "_centromere.bed",
+                                 LC_DIR + args.ref_name + "_wgMapabilityExcludable.bed")
+
+    # set the random seed if requested
+    if sim_config["random_seed"] is not None:
+        r.seed(sim_config["random_seed"])
+        logging.info("Setting random seed to " + str(sim_config["random_seed"]))
+
+    # read the reference genome
     print("Reading ref")
-    #read the reference genome
-    seqD, seqStartInds, ref_gsize = readFasta(args.ref_fasta,chrSet)
-    if args.mode == "viralAmp":
-        #read the viral genome
-        pass
+    seqD, seqStartInds, ref_gsize = readFasta(args.ref_fasta, chrSet)
+    if sim_config["viral_insertion"]:
+        # read the viral genome
+        viralSeqD, viralSeqStartInds, vir_gsize = readFasta
 
-    print(chrSet,len(seqD),seqStartInds,ref_gsize)
+    # set target size
+    if args.mode == "ecDNA":
+        granularity = 150000.0
+        isCircular = True
+        if not sim_config["viral_insertion"]:
+            target_size = sim_config["ecdna_target_size"]
+        else:
+            target_size = sim_config["viral_amp_target_size"]
 
-    #read the low complexity list
-    excIT = read_excludedRegions(LC_DIR + args.ref_name + "_wgMapabilityExcludable.bed")
+        nIntervals = sim_config["num_intervals"]
 
-    print("Selecting intervals")
-    target_size = run_config["ecdna_target_size"] if args.mode == "ecDNA" else run_config["viral_amp_target_size"]
-    interval_sizes = compute_interval_sizes(run_config["num_intervals"],target_size)
-    interval_regions = compute_interval_regions(interval_sizes,ref_gsize,seqStartInds,seqD,excIT)
-    for i in interval_regions:
-        print(i.to_string())
+    elif args.mode == "BFB":
+        granularity = 2500000.0
+        isCircular = False
+        if sim_config["viral_insertion"]:
+            warnMess = "BFB mode does not support viral integration. Ignoring viral insertion flag."
+            sys.stderr.write(warnMess + "\n")
+            logging.warning(warnMess)
 
+        if sim_config["num_intervals"] > 1:
+            warnMess = "BFB mode uses one interval only. YAML file specified " + str(sim_config["num_intervals"]) + \
+                       " intervals. Setting num_intervals to 1."
+            logging.warning(warnMess)
 
+        target_size = sim_config["bfb_target_size"]
+        nIntervals = 1
 
+    else:
+        isCircular = False
+        granularity = 999999999.0
+        sys.stderr.write("Unspecified mode\n")
+        sys.exit(1)
 
+    # check if user specified number of breakpoints
+    if sim_config["num_breakpoints"] != "auto":
+        num_breakpoints = int(sim_config["num_breakpoints"])
 
+    num_amplicons = args.num_amplicons if args.num_amplicons > 1 else sim_config["num_amplicons"]
+    used_intervals = defaultdict(IntervalTree)
 
+    # Do the simulations
+    logging.info("Amplicons to be simulated: " + str(num_amplicons))
+    for x in range(1, num_amplicons + 1):
+        amp_num = str(x)
+        print("\nGenerating amplicon " + amp_num)
+        logging.info('')
+        logging.info("--- Generating amplicon " + amp_num + " ---")
 
+        if sim_config["num_breakpoints"] == "auto":
+            num_breakpoints = r.randint(1, int(math.ceil(target_size/granularity)))
 
+        interval_sizes = compute_interval_sizes(nIntervals, target_size, min_interval_size, max_interval_size)
 
+        logging.info("Num breakpoints: " + str(num_breakpoints))
+        logging.info("Interval sizes: " + str(interval_sizes))
 
+        raw_intervals = compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT,
+                                                    used_intervals)
 
+        if sim_config["allow_overlapping_intervals"]:
+            used_intervals.clear()
 
+        bp_intervals = assign_bps(raw_intervals, min_segment_size, num_breakpoints)
 
+        logging.info("Doing simulation")
+        if args.mode == "ecDNA":
+            rearranged_amplicon = conduct_EC_SV(bp_intervals, num_breakpoints, sim_config["sv_probs"])
 
+        cycleFname = args.output_prefix + "_amplicon" + amp_num + "_cycles.txt"
+        graphFname = args.output_prefix + "_amplicon" + amp_num + "_graph.txt"
+        write_cycles_file(raw_intervals, bp_intervals, rearranged_amplicon, cycleFname, isCircular)
+        write_bpg_file(bp_intervals,rearranged_amplicon, graphFname, isCircular)
+        write_amplicon_fasta(rearranged_amplicon,args.output_prefix + "_amplicon" + amp_num + ".fasta", amp_num)
+
+    logging.info('')
+    logging.info("Finished")
+    logging.shutdown()
+    sys.exit()
