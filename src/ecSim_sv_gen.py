@@ -47,8 +47,8 @@ def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, e
         while not foundInt and iters < 10000:
             iters+=1
             # pull a random number from the ref.
-            spos = r.randint(1, ref_gsize - s)
-            sposn_index = bisect.bisect_left(chrom_sposns,spos) - 1
+            spos = r.randint(0, ref_gsize - s - 1)
+            sposn_index = bisect.bisect_right(chrom_sposns,spos) - 1
             epos = spos + s
             if epos < chrom_sposns[sposn_index + 1]:
                 # lookup the sequence
@@ -61,7 +61,7 @@ def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, e
                         foundInt = True
                         logging.info("Identified an interval in " + str(iters) + " iterations")
                         seg_id = len(intervals)+1
-                        intervals.append(gInterval(schrom, normStart, normEnd, currSeq, seg_id))
+                        intervals.append(gInterval(schrom, normStart + 1, normEnd + 1, currSeq, seg_id))
                         used_intervals[schrom].addi(normStart, normEnd)
 
         if not foundInt:
@@ -71,7 +71,7 @@ def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, e
             sys.exit(1)
 
     if viralSeq and viralName:
-        vInt = gInterval(viralName, 0, len(viralSeq), viralSeq, len(intervals)+1)
+        vInt = gInterval(viralName, 1, len(viralSeq), viralSeq, len(intervals)+1)
         vInt.preserve = True
         intervals.append(vInt)
 
@@ -95,7 +95,7 @@ def assign_bps(amp_intervals, flankingLength, num_breakpoints):
         while not gotBP:
             # pick a random breakpoint
             loc = r.randint(flankingLength, origLength-flankingLength)
-            sposn_index = bisect.bisect_left(cumulative_starts, loc) - 1
+            sposn_index = bisect.bisect(cumulative_starts, loc) - 1
             relStart = loc - cumulative_starts[sposn_index]
             # print(loc, sposn_index, relStart, origLength, cumulative_starts)
             d2E = cumulative_starts[sposn_index+1] - loc
@@ -122,7 +122,7 @@ def conduct_EC_SV(segL, num_breakpoints, sv_probs):
 
     origLength = float(sum(s.size for s in segL))
     delProb, dupProb, invProb, transProb = sv_probs["del"], sv_probs["dup"], sv_probs["inv"], sv_probs["trans"]
-    safeIds = set([x.id for x in newSegL if x.preserve])
+    safeIds = set([x.seg_id for x in newSegL if x.preserve])
 
     i = 0
     while i < int(math.ceil(num_breakpoints/2.0)):
@@ -151,7 +151,7 @@ def conduct_EC_SV(segL, num_breakpoints, sv_probs):
                 unManipSegs = (newSegL + newSegL)[strtP + numSegs:len(newSegL) + strtP]
                 print(len(newSegL), len(manipSegs), len(unManipSegs))
 
-        currSafeIds = set([x.id for x in unManipSegs if x.preserve])
+        currSafeIds = set([x.seg_id for x in unManipSegs if x.preserve])
         delAllowed = (currSafeIds == safeIds)
 
         # deletion

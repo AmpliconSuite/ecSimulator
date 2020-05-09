@@ -2,7 +2,7 @@ random_seed: 0
 num_amplicons: 1
 bfb_target_size: 50000000 #target BFB mode amplicon size in bp
 ecdna_target_size: 2000000 #target ecDNA mode amplicon size in bp
-viral_amp_target_size: 50000 #target viralAmp mode amplicon size in bp
+viral_amp_target_size: 1000000 #target viralAmp mode amplicon size in bp
 viral_insertion: False
 viral_strain: "hpv16.fasta"
 num_intervals: 2 #number of non-overlapping genomic regions to generate an amplicon with

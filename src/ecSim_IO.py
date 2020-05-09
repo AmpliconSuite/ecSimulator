@@ -24,7 +24,10 @@ def read_excludedRegions(cent_file, map_exc_file):
 
 
 # fasta parsing, derived from brent pedersen, https://www.biostars.org/p/710/
-def readFasta(fname, chrSet):
+def readFasta(fname, chrSet=None):
+    if chrSet is None:
+        chrSet = set()
+
     seqD = {}
     seqStartIndices = []
     with open(fname) as infile:
@@ -32,13 +35,13 @@ def readFasta(fname, chrSet):
         faiter = (x[1] for x in groupby(infile, lambda line: line[0] == ">"))
         for header in faiter:
             name = header.__next__()[1:].strip()
-            if name in chrSet:
+            if not chrSet or name in chrSet:
                 seq = "".join(s.strip() for s in faiter.__next__())
                 seqD[name] = seq
                 seqStartIndices.append((name,currPos))
                 currPos+=len(seq)
 
-    return seqD,seqStartIndices,currPos
+    return seqD, seqStartIndices, currPos
 
 # read a list of chromosomes names we can use
 def readChromSet(fname):
@@ -93,7 +96,7 @@ def write_bpg_file(bp_intervals, amplicon, outname, isCircular):
             bp2 = Bpoint(b.chrom, right_end)
 
             if bp1 <= bp2:
-                opair = (dirToChar[a.direction * -1], dirToChar[b.direction])
+                opair = (dirToChar[a.direction], dirToChar[b.direction * -1])
                 edgeCounts[(bp1, bp2, opair)]+=1
 
             else:
@@ -104,6 +107,7 @@ def write_bpg_file(bp_intervals, amplicon, outname, isCircular):
             # concordant edge
             if e[1].pos - e[0].pos == 1 and e[1].chrom == e[0].chrom:
                 outfields = ["concordant", ]
+
 
             # discordant edge
             else:

@@ -1,18 +1,11 @@
-schema:
-
-pre-processing
-build databases
-
-take parameters
-simulate ecdna/viral-amplicon/chromothriptic amplicon
-	apply some sort of SV params for each mode
-	#set integration points
-
-write fasta, 
-make bpg, cycles file
-simulate OM/NGS/LR 
+implement ecDNA integration
+implement ecDNA het.
+implement bfb simulation
+	-arm selection
+	-bfb generation
 
 
-
+scripts to simulate simulate OM/NGS/LR 
+chromothriptic amplicon?
 
 

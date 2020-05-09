@@ -16,6 +16,7 @@ max_interval_size = 20000000
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 PROG_DIR = SRC_DIR[:SRC_DIR.rindex('/')]
 LC_DIR = PROG_DIR + "/low_comp_regions/"
+VIR_DIR = PROG_DIR + "/oncoviruses/"
 
 
 if __name__ == '__main__':
@@ -69,7 +70,16 @@ if __name__ == '__main__':
     seqD, seqStartInds, ref_gsize = readFasta(args.ref_fasta, chrSet)
     if sim_config["viral_insertion"]:
         # read the viral genome
-        viralSeqD, viralSeqStartInds, vir_gsize = readFasta
+        logging.info("Viral insertion amplicon: " + sim_config["viral_strain"])
+        viralSeqD, viralSeqStartInds, vir_gsize = readFasta(VIR_DIR + sim_config["viral_strain"])
+        if len(viralSeqD) > 1:
+            sys.stderr.write("Viral genome has more than one fasta entry. Only first will be used.\n")
+
+        viralName = viralSeqStartInds[0][0]
+        viralSeq = viralSeqD[viralName]
+
+    else:
+        viralName, viralSeq = "", ""
 
     # set target size
     if args.mode == "ecDNA":
@@ -79,6 +89,7 @@ if __name__ == '__main__':
             target_size = sim_config["ecdna_target_size"]
         else:
             target_size = sim_config["viral_amp_target_size"]
+            granularity = target_size/13.0
 
         nIntervals = sim_config["num_intervals"]
 
@@ -127,8 +138,11 @@ if __name__ == '__main__':
         logging.info("Num breakpoints: " + str(num_breakpoints))
         logging.info("Interval sizes: " + str(interval_sizes))
 
+        if sim_config["viral_insertion"]:
+            viralName = sim_config["viral_strain"].rsplit(".")[0]
+
         raw_intervals = compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT,
-                                                    used_intervals)
+                                                    used_intervals, viralName, viralSeq)
 
         if sim_config["allow_overlapping_intervals"]:
             used_intervals.clear()
