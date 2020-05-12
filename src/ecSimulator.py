@@ -138,8 +138,8 @@ if __name__ == '__main__':
         logging.info("Num breakpoints: " + str(num_breakpoints))
         logging.info("Interval sizes: " + str(interval_sizes))
 
-        if sim_config["viral_insertion"]:
-            viralName = sim_config["viral_strain"].rsplit(".")[0]
+        # if sim_config["viral_insertion"]:
+        #     viralName = sim_config["viral_strain"].rsplit(".")[0]
 
         raw_intervals = compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT,
                                                     used_intervals, viralName, viralSeq)
