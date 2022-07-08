@@ -29,7 +29,7 @@ available. The simulator should finish within 30s-1min for typical simulation ru
 thousands of structures may take slightly longer.
 
 ### Usage
-An example command to generate 5 different ecDNA of episomal origin with at least two non-overlapping genomic segments
+An example command to generate an ecDNA of episomal origin with at least two non-overlapping genomic segments
 with default SV frequencies:
 ```shell
 ecSimulator/src/ecSimulator.py --ref_name GRCh38 --ref_fasta /path/to/hg38.fa -o test
