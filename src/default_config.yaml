@@ -1,17 +1,17 @@
 random_seed: 0
-num_amplicons: 1
-bfb_target_size: 50000000 #target BFB mode amplicon size in bp
-ecdna_target_size: 2000000 #target ecDNA mode amplicon size in bp
-viral_amp_target_size: 1000000 #target viralAmp mode amplicon size in bp
+target_size: 2000000  # target ecDNA mode amplicon size in bp
 viral_insertion: False
 viral_strain: "hpv16.fasta"
-num_intervals: 2 #number of non-overlapping genomic regions to generate an amplicon with
+num_intervals: 2  # number of non-overlapping genomic regions to generate an amplicon with
 num_breakpoints: "auto"
-allow_overlapping_intervals: False #Allow different amplicons to use the same intervals
+allow_overlapping_intervals: True  # Allow different amplicons to use the same intervals
+origin: "episome"  # can be either episome, chromothripsis, tst, or bfb.
+#overlap_bed: None  # specify a bed file of regions the amplicon must overlap.
 #integrated: False
-#ecDNA_heterogeneity: [1, ] #[1,] implies no heterogeneity. Can try [0.5, 0.25, 0.25] for a 2:1:1 ratio, etc.
+#ecDNA_heterogeneity: [1, ]  # [1,] implies no heterogeneity. Can try [0.5, 0.25, 0.25] for a 2:1:1 ratio, etc.
 sv_probs:
   del: 0.6
   dup: 0.5
   inv: 0.4
   trans: 0.4
+  fback: 0.05  # inverted duplication

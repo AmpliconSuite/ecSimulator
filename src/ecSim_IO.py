@@ -24,9 +24,10 @@ def read_excludedRegions(cent_file, map_exc_file):
 
 
 # fasta parsing, derived from brent pedersen, https://www.biostars.org/p/710/
-def readFasta(fname, chrSet=None):
+def readFasta(fname, ref_name, chrSet=None):
     if chrSet is None:
-        chrSet = set()
+        pre = "chr" if ref_name != "GRCh37" else ""
+        chrSet = set([pre + str(x) for x in range(1, 23)] + [pre + "X", pre + "Y"])
 
     seqD = {}
     seqStartIndices = []
@@ -34,11 +35,12 @@ def readFasta(fname, chrSet=None):
         currPos = 0
         faiter = (x[1] for x in groupby(infile, lambda line: line[0] == ">"))
         for header in faiter:
-            name = header.__next__()[1:].strip()
-            if not chrSet or name in chrSet:
-                seq = "".join(s.strip() for s in faiter.__next__())
+            name = next(header)[1:].rstrip()
+            seq = "".join(s.rstrip() for s in next(faiter))
+            if name in chrSet:
+                print(name)
                 seqD[name] = seq
-                seqStartIndices.append((name,currPos))
+                seqStartIndices.append((name, currPos))
                 currPos+=len(seq)
 
     return seqD, seqStartIndices, currPos

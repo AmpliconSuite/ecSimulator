@@ -36,8 +36,8 @@ def compute_interval_sizes(num_segs, target_size, min_interval_size, max_interva
 
 
 # select the ecDNA intervals
-def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT, used_intervals,
-                                viralName="", viralSeq=""):
+def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT, used_intervals, sameChrom,
+                                origin, viralName="", viralSeq=""):
     intervals = []
     chrom_snames, chrom_sposns = map(list, zip(*seqStartInds))
     chrom_sposns.append(ref_gsize)
@@ -45,7 +45,7 @@ def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, e
         foundInt = False
         iters = 0
         while not foundInt and iters < 10000:
-            iters+=1
+            iters += 1
             # pull a random number from the ref.
             spos = r.randint(0, ref_gsize - s - 1)
             sposn_index = bisect.bisect_right(chrom_sposns,spos) - 1
@@ -53,19 +53,21 @@ def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, e
             if epos < chrom_sposns[sposn_index + 1]:
                 # lookup the sequence
                 schrom = chrom_snames[sposn_index]
-                normStart = spos - chrom_sposns[sposn_index]
-                normEnd = epos - chrom_sposns[sposn_index]
-                if not excIT[schrom][normStart:normEnd] and not used_intervals[schrom].overlaps(normStart, normEnd):
-                    currSeq = seqD[schrom][normStart:normEnd]
-                    if "N" not in currSeq:
-                        foundInt = True
-                        logging.info("Identified an interval in " + str(iters) + " iterations")
-                        seg_id = len(intervals)+1
-                        intervals.append(gInterval(schrom, normStart + 1, normEnd + 1, currSeq, seg_id))
-                        used_intervals[schrom].addi(normStart, normEnd)
+                if not sameChrom or not intervals or schrom == intervals[0].chrom:
+                    normStart = spos - chrom_sposns[sposn_index]
+                    normEnd = epos - chrom_sposns[sposn_index]
+                    if not excIT[schrom][normStart:normEnd] and not used_intervals[schrom].overlaps(normStart, normEnd):
+                        currSeq = seqD[schrom][normStart:normEnd]
+                        if "N" not in currSeq:
+                            foundInt = True
+                            logging.info("Identified an interval in " + str(iters) + " iterations")
+                            seg_id = len(intervals)+1
+                            intervals.append(gInterval(schrom, normStart + 1, normEnd + 1, currSeq, seg_id))
+                            used_intervals[schrom].addi(normStart, normEnd)
 
         if not foundInt:
-            errorM = "Could not generate an interval of size " + str(s) + " in a reasonable number of iterations"
+            errorM = "Could not generate " + str(len(interval_sizes)) + " valid random intervals of size " + str(s) + \
+                     " in a reasonable number of iterations!"
             logging.error(errorM)
             sys.stdout.write(errorM + "\n")
             sys.exit(1)
@@ -74,6 +76,22 @@ def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, e
         vInt = gInterval(viralName, 1, len(viralSeq), viralSeq, len(intervals)+1)
         vInt.preserve = True
         intervals.append(vInt)
+
+    if origin == "chromothripsis":
+        intervals = sorted(intervals, key=lambda x: (x.chrom, x.start))
+        for ind, x in enumerate(intervals):
+            x.seg_id = ind + 1
+
+    elif origin == "tst":
+        intervals = sorted(intervals, key=lambda x: (x.chrom, x.start))
+        for ind, x in enumerate(intervals):
+            x.seg_id = ind + 1
+        rev_ints = copy.deepcopy(intervals)[::-1]
+        for x in rev_ints:
+            x.direction = -1
+            x.seq = str(x.reverse_complement())
+
+        intervals = intervals + rev_ints
 
     logging.info("Intervals: ")
     for ival in intervals:
@@ -121,7 +139,7 @@ def conduct_EC_SV(segL, num_breakpoints, sv_probs):
         return newSegL
 
     origLength = float(sum(s.size for s in segL))
-    delProb, dupProb, invProb, transProb = sv_probs["del"], sv_probs["dup"], sv_probs["inv"], sv_probs["trans"]
+    delProb, dupProb, invProb, transProb, fbackProb = sv_probs["del"], sv_probs["dup"], sv_probs["inv"], sv_probs["trans"], sv_probs["fback"]
     safeIds = set([x.seg_id for x in newSegL if x.preserve])
 
     i = 0
@@ -146,9 +164,9 @@ def conduct_EC_SV(segL, num_breakpoints, sv_probs):
             startI = strtP
             if startI != loopedEndI:
                 zeroLen = False
-                manipSegs = (newSegL + newSegL)[strtP:strtP + numSegs]
+                manipSegs = (copy.deepcopy(newSegL) + copy.deepcopy(newSegL))[strtP:strtP + numSegs]
                 manipLen = float(sum(s.size for s in manipSegs))
-                unManipSegs = (newSegL + newSegL)[strtP + numSegs:len(newSegL) + strtP]
+                unManipSegs = (copy.deepcopy(newSegL) + copy.deepcopy(newSegL))[strtP + numSegs:len(newSegL) + strtP]
                 print(len(newSegL), len(manipSegs), len(unManipSegs))
 
         currSafeIds = set([x.seg_id for x in unManipSegs if x.preserve])
@@ -166,18 +184,23 @@ def conduct_EC_SV(segL, num_breakpoints, sv_probs):
         else:
             trans, dup, inv = False, False, False
 
-            # is translocated
-            if r.random() < transProb:
-                trans = True
-
-            # is duplicated
-            if r.random() < dupProb and (currLength + manipLen) / origLength < 1.3:
-                print(manipLen,lenDiff,origLength,(currLength + manipLen) / origLength)
+            if r.random() < fbackProb:
                 dup = True
-
-            # is inverted
-            if r.random() < invProb:
                 inv = True
+
+            else:
+                # is translocated
+                if r.random() < transProb:
+                    trans = True
+
+                # is duplicated
+                if r.random() < dupProb and (currLength + manipLen) / origLength < 1.3:
+                    print(manipLen,lenDiff,origLength,(currLength + manipLen) / origLength)
+                    dup = True
+
+                # is inverted
+                if r.random() < invProb:
+                    inv = True
 
             print(",".join([str(x.seg_id) + "+" if x.direction == 1 else str(x.seg_id) + "-" for x in manipSegs]) + " | " + str(manipLen))
             print("trans,dup,inv: " + str((trans, dup, inv)))
