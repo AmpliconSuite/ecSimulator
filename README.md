@@ -65,7 +65,7 @@ random_seed: 0  # sets a seed for the simulator, set to 'None' for random seed.
 target_size: 2000000  # target size for the ecDNA size, in basepairs. Target size is approximate due to duplications and deletions.
 origin: "episome"  # type of ecDNA to simulate. Can be "episome", "chromothripsis", or "tst".
 num_breakpoints: "auto"  # number of breakpoints to assign inside the amplicon (approximate). 
-num_intervals: 2  # number of non-overlapping genomic regions to use for the amplicon. Recommend setting to "auto" if origin is not "episome".
+num_intervals: 2  # number of non-overlapping genomic regions to use for the amplicon. Breakpoints will be assigned within these larger intervals. Recommend setting to "auto" if origin is not "episome".
 allow_overlapping_intervals: True  # allow different amplicons from the run to re-use some of the same genomic coordinates.
 viral_insertion: False  # create a hybrid human-viral ecDNA
 viral_strain: "hpv16.fasta"  # Only used if viral_insertion is 'True'. Specify the name of the viral strain to be used from the oncoviruses directory.
@@ -73,7 +73,7 @@ sv_probs:  # probability this type of SV occurs during the iterative rearrangeme
   del: 0.6
   dup: 0.5
   inv: 0.4
-  trans: 0.4  # translocation (can be intra- or inter-chromosomal)
+  trans: 0.4  # translocation (moves segment to random location inside amplicon)
   fback: 0.05  # foldback, this stacks on top of the probability of independently getting both a dup and inv at the same time.
 
 ```
