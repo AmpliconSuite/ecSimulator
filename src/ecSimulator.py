@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.3"
+__version__ = "0.4"
 __author__ = "Jens Luebeck (jluebeck [ at] ucsd.edu)"
 
 import argparse
@@ -42,7 +42,8 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
     if sim_config["viral_insertion"]:
         # read the viral genome
         logging.info("Viral insertion amplicon: " + sim_config["viral_strain"])
-        viralSeqD, viralSeqStartInds, vir_gsize = readFasta(VIR_DIR + sim_config["viral_strain"])
+        viralSeqD, viralSeqStartInds, vir_gsize = readFasta(VIR_DIR + sim_config["viral_strain"],
+                                                            sim_config["viral_strain"].rsplit(".")[0])
         if len(viralSeqD) > 1:
             sys.stderr.write("Viral genome has more than one fasta entry. Only first will be used.\n")
 
@@ -53,13 +54,17 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
         viralName, viralSeq = "", ""
 
     # set target size
-    mean_seg_size = 150000.0  # refers to the average distance between breakpoints.
     isCircular = True
     target_size = sim_config["target_size"]
-    if sim_config["viral_insertion"]:
+    if "mean_segment_size" in sim_config:
+        mean_seg_size = sim_config["mean_segment_size"]
+    else:
+        mean_seg_size = 150000.0  # refers to the average distance between breakpoints.
+
+    if sim_config["viral_insertion"] and sim_config["num_breakpoints"] == "auto":
         mean_seg_size = target_size / 13.0
 
-    sameChrom = False
+    sameChrom = sim_config["same_chromosome"] is True
     origin = sim_config["origin"].lower()
     allowed_origins = ["episome", "chromothripsis", "tst", "bfb"]
     if not origin in allowed_origins:
@@ -79,6 +84,10 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
         nIntervals = sim_config["num_intervals"]
 
     used_intervals = defaultdict(IntervalTree)
+    if sim_config["overlap_bed"]:
+        overlap_regions = read_overlap_regions(sim_config["overlap_bed"])
+    else:
+        overlap_regions = None
 
     # Do the simulations
     logging.info("Amplicons to be simulated: " + str(num_amplicons))
@@ -97,9 +106,9 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
         logging.info("Num breakpoints: " + str(num_breakpoints))
         logging.info("Interval sizes: " + str(interval_sizes))
         raw_intervals = compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT,
-                                                    used_intervals, sameChrom, origin, viralName, viralSeq)
+                            used_intervals, sameChrom, origin, overlap_regions, viralName, viralSeq)
 
-        if sim_config["allow_overlapping_intervals"]:
+        if sim_config["allow_interval_reuse"]:
             used_intervals.clear()
 
         bp_intervals = assign_bps(raw_intervals, min_segment_size, num_breakpoints)

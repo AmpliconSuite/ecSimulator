@@ -1,8 +1,8 @@
-import sys
-import copy
-import math
 import bisect
+import copy
 import logging
+import math
+import sys
 
 from numpy import cumsum
 from numpy import random as r
@@ -37,8 +37,14 @@ def compute_interval_sizes(num_segs, target_size, min_interval_size, max_interva
 
 # select the ecDNA intervals
 def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT, used_intervals, sameChrom,
-                                origin, viralName="", viralSeq=""):
+                                origin, overlap_ivald, viralName="", viralSeq=""):
     intervals = []
+    if overlap_ivald:
+        flat_overlapl = [(x, y.begin, y.end) for x in overlap_ivald.keys() for y in overlap_ivald[x]]
+        if len(set([x[0] for x in flat_overlapl])) > 0 and sameChrom:
+            logging.warning("multichromosomal is set to false but overlap bed contains regions from multiple "
+                            "chromosomes. Overlap bed takes precedence over multichromosomal = False")
+
     chrom_snames, chrom_sposns = map(list, zip(*seqStartInds))
     chrom_sposns.append(ref_gsize)
     for s in interval_sizes:
@@ -46,24 +52,58 @@ def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, e
         iters = 0
         while not foundInt and iters < 10000:
             iters += 1
-            # pull a random number from the ref.
-            spos = r.randint(0, ref_gsize - s - 1)
-            sposn_index = bisect.bisect_right(chrom_sposns,spos) - 1
-            epos = spos + s
-            if epos < chrom_sposns[sposn_index + 1]:
-                # lookup the sequence
-                schrom = chrom_snames[sposn_index]
-                if not sameChrom or not intervals or schrom == intervals[0].chrom:
-                    normStart = spos - chrom_sposns[sposn_index]
-                    normEnd = epos - chrom_sposns[sposn_index]
-                    if not excIT[schrom][normStart:normEnd] and not used_intervals[schrom].overlaps(normStart, normEnd):
-                        currSeq = seqD[schrom][normStart:normEnd]
-                        if "N" not in currSeq:
-                            foundInt = True
-                            logging.info("Identified an interval in " + str(iters) + " iterations")
-                            seg_id = len(intervals)+1
-                            intervals.append(gInterval(schrom, normStart + 1, normEnd + 1, currSeq, seg_id))
-                            used_intervals[schrom].addi(normStart, normEnd)
+            # if there are regions desired to be in the amplicon, use those
+            if overlap_ivald:
+                elem = flat_overlapl[r.randint(0, len(flat_overlapl))]
+                schrom, init_start, init_end = elem
+                # check if interval wide enough to pull from within the interval
+                elem_len = init_end - init_start
+                if elem_len >= s:
+                    d = elem_len - s
+                    lclip = r.randint(1, d)
+                    rclip = d - lclip
+                    normStart = init_start + lclip
+                    normEnd = init_end - rclip
+
+                # try to flank the interval
+                else:
+                    d = s - elem_len
+                    lpad = r.randint(1, d)
+                    rpad = d - lpad
+                    normStart = init_start - lpad
+                    normEnd = init_end + rpad
+
+                if not used_intervals[schrom].overlaps(normStart, normEnd):
+                    currSeq = seqD[schrom][normStart:normEnd]
+                    if "N" not in currSeq:
+                        foundInt = True
+                        logging.info("Identified an interval in " + str(iters) + " iterations")
+                        seg_id = len(intervals) + 1
+                        intervals.append(gInterval(schrom, normStart, normEnd, currSeq, seg_id))
+                        used_intervals[schrom].addi(normStart, normEnd)
+
+                    if excIT[schrom][normStart:normEnd] or "N" in currSeq:
+                        logging.warning("Interval {}:{}-{} contained some low-complexity regions".format(schrom, str(normStart), str(normEnd)))
+
+            # else pull a random number from the ref.
+            else:
+                spos = r.randint(0, ref_gsize - s - 1)
+                sposn_index = bisect.bisect_right(chrom_sposns,spos) - 1
+                epos = spos + s
+                if epos < chrom_sposns[sposn_index + 1]:
+                    # lookup the sequence
+                    schrom = chrom_snames[sposn_index]
+                    if not sameChrom or not intervals or schrom == intervals[0].chrom:
+                        normStart = spos - chrom_sposns[sposn_index]
+                        normEnd = epos - chrom_sposns[sposn_index]
+                        if not excIT[schrom][normStart:normEnd] and not used_intervals[schrom].overlaps(normStart, normEnd):
+                            currSeq = seqD[schrom][normStart:normEnd]
+                            if "N" not in currSeq:
+                                foundInt = True
+                                logging.info("Identified an interval in " + str(iters) + " iterations")
+                                seg_id = len(intervals)+1
+                                intervals.append(gInterval(schrom, normStart + 1, normEnd + 1, currSeq, seg_id))
+                                used_intervals[schrom].addi(normStart, normEnd)
 
         if not foundInt:
             errorM = "Could not generate " + str(len(interval_sizes)) + " valid random intervals of size " + str(s) + \

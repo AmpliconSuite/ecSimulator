@@ -11,7 +11,7 @@ ecSimulator create the following **outputs**:
 * AmpliconArchitect `_cycles.txt` file, encoding the order and orientation of the genomic segments.
 * AmpliconArchitect `_graph.txt` file, encoding the genomic segments and SVs (breakpoint graph).
 
-The latest version of ecSimulator is **0.3**.
+The latest version of ecSimulator is **0.4**.
 
 ### Requirements and Installation
 ecSimulator requires python3 and the `numpy` and `intervaltree` python libraries.
@@ -66,9 +66,11 @@ target_size: 2000000  # target size for the ecDNA size, in basepairs. Target siz
 origin: "episome"  # type of ecDNA to simulate. Can be "episome", "chromothripsis", or "tst".
 num_breakpoints: "auto"  # number of breakpoints to assign inside the amplicon (approximate). 
 num_intervals: 2  # number of non-overlapping genomic regions to use for the amplicon. Breakpoints will be assigned within these larger intervals. Recommend setting to "auto" if origin is not "episome".
-allow_overlapping_intervals: True  # allow different amplicons from the run to re-use some of the same genomic coordinates.
+multichromosomal: True  # if num_intervals > 1, allow intervals to be sampled from multiple different chromosomes.
+allow_interval_reuse: True  # allow different amplicons from the run to re-use some of the same genomic coordinates.
 viral_insertion: False  # create a hybrid human-viral ecDNA
 viral_strain: "hpv16.fasta"  # Only used if viral_insertion is 'True'. Specify the name of the viral strain to be used from the oncoviruses directory.
+overlap_bed: ""  # specify a path to a bed file of regions the amplicon must overlap.
 sv_probs:  # probability this type of SV occurs during the iterative rearrangement process.
   del: 0.6
   dup: 0.5

@@ -23,6 +23,19 @@ def read_excludedRegions(cent_file, map_exc_file):
     return excIT
 
 
+# Reads a bed file into an intervaltree dict
+def read_overlap_regions(reqRegBedF):
+    reqRegIvalD = defaultdict(IntervalTree)
+    with open(reqRegBedF) as infile:
+        for line in infile:
+            line = line.rstrip()
+            if line:
+                fields = line.rsplit("\t")
+                reqRegIvalD[fields[0]].addi(int(fields[1]), int(fields[2]))
+
+    return reqRegIvalD
+
+
 # fasta parsing, derived from brent pedersen, https://www.biostars.org/p/710/
 def readFasta(fname, ref_name, chrSet=None):
     if chrSet is None:
@@ -64,9 +77,10 @@ def write_cycles_file(raw_intervals, bp_intervals, amplicon, outname, isCircular
             outfile.write(outline)
 
         segSeq = ",".join([str(x.seg_id) + "+" if x.direction == 1 else str(x.seg_id) + "-" for x in amplicon])
+        ampl = str(int(sum([x.size for x in amplicon])))
         if not isCircular:
             segSeq = "0+," + segSeq + ",0+"
-        outline = "Cycle=1;Copy_count=2.0;Segments=" + segSeq + "\n"
+        outline = "Cycle=1;Copy_count=1.0;Length={};Segments={}\n".format(ampl, segSeq)
         outfile.write(outline)
 
 
@@ -118,7 +132,7 @@ def write_bpg_file(bp_intervals, amplicon, outname, isCircular):
             posString1 = e[0].chrom + ":" + str(e[0].pos) + e[2][0]
             posString2 = e[1].chrom + ":" + str(e[1].pos) + e[2][1]
             posPair = posString1 + "->" + posString2 + "\t"
-            outfields+=[posPair, str(2.0*count), str(count), "None", "None"]
+            outfields+=[posPair, str(float(count)), str(count), "None", "None"]
             outstring = "\t".join(outfields) + "\n"
             outfile.write(outstring)
 
