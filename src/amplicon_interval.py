@@ -1,5 +1,25 @@
+from collections import defaultdict
 import warnings
+
+from intervaltree import IntervalTree
+
 lookup = str.maketrans("ACGT", "TGCA")
+
+
+# take a list of gIntervals and merge them
+def merge_gIntervals(intervals, seqD):
+    ivald = defaultdict(IntervalTree)
+    merged_intervals = []
+    for ival in intervals:
+        ivald[ival.chrom].addi(ival.start, ival.end)
+
+    for c, itree in ivald.items():
+        itree.merge_overlaps()
+        for ival in itree:
+            curr_seq = seqD[c][ival.begin:ival.end]
+            merged_intervals.append(gInterval(c, ival.begin, ival.end, curr_seq, -1))
+
+    return merged_intervals
 
 
 class gInterval(object):
@@ -12,8 +32,9 @@ class gInterval(object):
         self.seg_id = seg_id
         self.direction = 1
         self.preserve = False
+        self.is_chromosomal = True
 
-    def to_string(self):
+    def __str__(self):
         return self.chrom + ":" + str(self.start) + "-" + str(self.end) + " | " + str(self.size)
 
     def reverse_complement(self):
@@ -21,7 +42,7 @@ class gInterval(object):
 
     def break_interval(self, relative_location):
         if self.preserve:
-            warnings.warn("break_interval called on preseved segment")
+            warnings.warn("break_interval called on preserved segment")
             return self, gInterval("", 0, 0, "", -1)
 
         a_s, a_e = self.start, self.start + relative_location - 1

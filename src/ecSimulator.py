@@ -9,7 +9,7 @@ import sys
 import yaml
 
 if sys.version_info[0] < 3:
-    raise Exception("Must be using Python 3")
+    raise Exception("Must use Python 3")
 
 from ecSim_IO import *
 from ecSim_sv_gen import *
@@ -17,6 +17,7 @@ from ecSim_sv_gen import *
 min_segment_size = 1000
 min_interval_size = 10000
 max_interval_size = 20000000
+flanking_length = 100000
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 PROG_DIR = SRC_DIR[:SRC_DIR.rindex('/')]
 LC_DIR = PROG_DIR + "/low_comp_regions/"
@@ -91,6 +92,7 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
 
     # Do the simulations
     logging.info("Amplicons to be simulated: " + str(num_amplicons))
+    all_padded_intervals = []
     for x in range(1, num_amplicons + 1):
         amp_num = str(x)
         print("\nGenerating amplicon " + amp_num)
@@ -105,8 +107,17 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
         interval_sizes = compute_interval_sizes(nIntervals, target_size, min_interval_size, max_interval_size)
         logging.info("Num breakpoints: " + str(num_breakpoints))
         logging.info("Interval sizes: " + str(interval_sizes))
-        raw_intervals = compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT,
+        raw_intervals = select_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT,
                             used_intervals, sameChrom, origin, overlap_regions, viralName, viralSeq)
+
+        logging.info("Selected intervals:")
+        for y in raw_intervals:
+            logging.info(str(y))
+
+        # write a fasta of the background intervals (intervals + padding)
+        padded_raw_intervals = get_padded_intervals(raw_intervals, seqD, flanking_length)
+        all_padded_intervals.extend(padded_raw_intervals)
+
 
         if sim_config["allow_interval_reuse"]:
             used_intervals.clear()
@@ -116,16 +127,19 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
         logging.info("Doing simulation")
         rearranged_amplicon = conduct_EC_SV(bp_intervals, num_breakpoints, sim_config["sv_probs"])
 
-        cycleFname = output_prefix + "_amplicon" + amp_num + "_cycles.txt"
-        graphFname = output_prefix + "_amplicon" + amp_num + "_graph.txt"
-        write_cycles_file(raw_intervals, bp_intervals, rearranged_amplicon, cycleFname, isCircular)
-        write_bpg_file(bp_intervals, rearranged_amplicon, graphFname, isCircular)
+        cycle_fname = output_prefix + "_amplicon" + amp_num + "_cycles.txt"
+        graph_fname = output_prefix + "_amplicon" + amp_num + "_graph.txt"
+        write_cycles_file(raw_intervals, bp_intervals, rearranged_amplicon, cycle_fname, isCircular)
+        write_bpg_file(bp_intervals, rearranged_amplicon, graph_fname, isCircular)
         write_amplicon_fasta(rearranged_amplicon, output_prefix + "_amplicon" + amp_num + ".fasta", amp_num)
+
+    merged_padded_raw_intervals = merge_gIntervals(all_padded_intervals, seqD)
+    merged_intervals_fname = output_prefix + "_background_intervals.fasta"
+    write_interval_fasta(merged_intervals_fname, merged_padded_raw_intervals)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Simulate focal amplifications such as ecDNA "
-                                                 "or virally-mediated amplicons.")
+    parser = argparse.ArgumentParser(description="Simulate ecDNA genome structures.")
     parser.add_argument("--ref_name", help="Reference genome version.", choices=["hg19", "GRCh37", "GRCh38"],
                         required=True)
     parser.add_argument("--ref_fasta", help="Reference genome fasta.", required=True)

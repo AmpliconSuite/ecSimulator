@@ -1,7 +1,7 @@
 # ecSimulator
 
 ### Introduction
-ecSimulator simulates random ecDNA with user-specifiable parameters for SV frequencies, size, and mechanism
+ecSimulator simulates ecDNA genome structures with user-specifiable parameters for SV frequencies, size, and mechanism
 of origin.
 
 It takes as input a reference genome fasta and a yaml configuration file.
@@ -11,7 +11,7 @@ ecSimulator create the following **outputs**:
 * AmpliconArchitect `_cycles.txt` file, encoding the order and orientation of the genomic segments.
 * AmpliconArchitect `_graph.txt` file, encoding the genomic segments and SVs (breakpoint graph).
 
-The latest version of ecSimulator is **0.4**.
+The latest version of ecSimulator is **0.5**.
 
 ### Requirements and Installation
 ecSimulator requires python3 and the `numpy` and `intervaltree` python libraries.
@@ -23,6 +23,7 @@ git clone https://github.com/jluebeck/ecSimulator.git
 ```
 
 Users will also need the reference genome fasta file for hg19, GRCh37 or GRCh38 (hg38).
+These are available in the [AmpliconArchitect data repo](https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/) for users who may already have that tool installed.
 
 The memory an CPU requirements of ecSimulator are minimal, but please try to have more than 4Gb RAM
 available. The simulator should finish within 30s-1min for typical simulation runs. Simulating

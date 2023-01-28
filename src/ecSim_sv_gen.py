@@ -35,8 +35,22 @@ def compute_interval_sizes(num_segs, target_size, min_interval_size, max_interva
     return interval_sizes
 
 
+# take a gInterval and make a new gInterval that includes some flanking regions for the interval
+def get_padded_intervals(intervals, seqD, flanking_length):
+    padded_intervals = []
+    for ival in intervals:
+        if not ival.is_chromosomal:
+            continue
+
+        flanked_start = max(0, ival.start - flanking_length)
+        flanked_end = min(ival.end + flanking_length, len(seqD[ival.chrom]) - 1)
+        flanked_seq = seqD[ival.chrom][flanked_start:flanked_end]
+        padded_intervals.append(gInterval(ival.chrom, flanked_start, flanked_end, flanked_seq, ival.seg_id))
+
+    return padded_intervals
+
 # select the ecDNA intervals
-def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT, used_intervals, sameChrom,
+def select_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT, used_intervals, sameChrom,
                                 origin, overlap_ivald, viralName="", viralSeq=""):
     intervals = []
     if overlap_ivald:
@@ -83,7 +97,8 @@ def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, e
                         used_intervals[schrom].addi(normStart, normEnd)
 
                     if excIT[schrom][normStart:normEnd] or "N" in currSeq:
-                        logging.warning("Interval {}:{}-{} contained some low-complexity regions".format(schrom, str(normStart), str(normEnd)))
+                        logging.warning("Interval {}:{}-{} contained some low-complexity regions".format(
+                            schrom, str(normStart), str(normEnd)))
 
             # else pull a random number from the ref.
             else:
@@ -115,6 +130,7 @@ def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, e
     if viralSeq and viralName:
         vInt = gInterval(viralName, 1, len(viralSeq), viralSeq, len(intervals)+1)
         vInt.preserve = True
+        vInt.is_chromosomal = False
         intervals.append(vInt)
 
     if origin == "chromothripsis":
@@ -133,9 +149,9 @@ def compute_ec_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, e
 
         intervals = intervals + rev_ints
 
-    logging.info("Intervals: ")
+    logging.info("Selected intervals: ")
     for ival in intervals:
-        logging.info(ival.to_string())
+        logging.info(str(ival))
 
     return intervals
 

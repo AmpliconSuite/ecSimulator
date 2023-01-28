@@ -9,6 +9,7 @@ Bpoint = namedtuple("Bpoint", "chrom pos")
 # --------------------------------------------------------------------
 # Input methods
 
+
 # read the excludable region database
 # return a dictionary of interval trees
 def read_excludedRegions(cent_file, map_exc_file):
@@ -105,7 +106,7 @@ def write_bpg_file(bp_intervals, amplicon, outname, isCircular):
         # construct the set of edges, such that reverse oriented breakpoint and forward oriented breakpoint are the same
         edgeCounts = defaultdict(int)
         pairedElems = zip(amplicon, amplicon[1:]) if not isCircular else zip(amplicon, amplicon[1:] + [amplicon[0]])
-        for a,b in pairedElems:
+        for a, b in pairedElems:
             left_end = a.end if a.direction == 1 else a.start
             right_end = b.start if b.direction == 1 else b.end
             bp1 = Bpoint(a.chrom, left_end)
@@ -123,7 +124,6 @@ def write_bpg_file(bp_intervals, amplicon, outname, isCircular):
             # concordant edge
             if e[1].pos - e[0].pos == 1 and e[1].chrom == e[0].chrom:
                 outfields = ["concordant", ]
-
 
             # discordant edge
             else:
@@ -144,3 +144,15 @@ def write_amplicon_fasta(amplicon, outname, amp_num):
             ampSeq+=ival.seq
 
         outfile.write(ampSeq)
+
+
+def write_interval_fasta(outname, intervals):
+    with open(outname, 'w') as outfile:
+        outputSeq = ""
+        for ind, ival in enumerate(intervals):
+            ivalEntry = ">" + str(ival).rsplit(" | ")[0] + "\n"
+            ivalEntry+=ival.seq
+            ivalEntry+="\n"
+            outputSeq+=ivalEntry
+
+        outfile.write(ivalEntry)
