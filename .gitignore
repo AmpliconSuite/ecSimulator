@@ -3,3 +3,4 @@ testing/*
 src/__pycache__/*
 *.pyc
 *.swp
+nanosim_models/promethion_10_4_1_guppy_model/
