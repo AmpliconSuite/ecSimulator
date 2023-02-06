@@ -143,7 +143,6 @@ if __name__ == '__main__':
     parser.add_argument("--ref_name", help="Reference genome version.", choices=["hg19", "GRCh37", "GRCh38"],
                         required=True)
     parser.add_argument("--ref_fasta", help="Reference genome fasta.", required=True)
-    # parser.add_argument("--mode", help="Type of amplicon to simulate.", choices=["ecDNA", "BFB"], default="ecDNA")
     parser.add_argument("--config_file", help="Path to config file for run. "
                                               "Will use mode's default params if not provided.")
     parser.add_argument("-o", "--output_prefix", help="Prefix for output filenames.", required=True)

@@ -64,7 +64,7 @@ def select_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT
     for s in interval_sizes:
         foundInt = False
         iters = 0
-        while not foundInt and iters < 10000:
+        while not foundInt and iters < 20000:
             iters += 1
             # if there are regions desired to be in the amplicon, use those
             if overlap_ivald:
@@ -94,7 +94,8 @@ def select_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT
                         logging.info("Identified an interval in " + str(iters) + " iterations")
                         seg_id = len(intervals) + 1
                         intervals.append(gInterval(schrom, normStart, normEnd, currSeq, seg_id))
-                        used_intervals[schrom].addi(normStart, normEnd)
+                        if not overlap_ivald:
+                            used_intervals[schrom].addi(normStart, normEnd)
 
                     if excIT[schrom][normStart:normEnd] or "N" in currSeq:
                         logging.warning("Interval {}:{}-{} contained some low-complexity regions".format(

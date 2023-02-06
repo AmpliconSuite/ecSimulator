@@ -6,30 +6,34 @@ of origin.
 
 It takes as input a reference genome fasta and a yaml configuration file.
 
-ecSimulator create the following **outputs**:
-* Fasta file encoding the simulated ecDNA structure.
-* AmpliconArchitect `_cycles.txt` file, encoding the order and orientation of the genomic segments.
-* AmpliconArchitect `_graph.txt` file, encoding the genomic segments and SVs (breakpoint graph).
-
-The latest version of ecSimulator is **0.5**.
+The latest version of ecSimulator is **0.5.1**.
 
 ### Requirements and Installation
+#### Basic requirements:
 ecSimulator requires python3 and the `numpy` and `intervaltree` python libraries.
 
-To install, run the following
 ```shell
 pip3 install numpy intervaltree  # or conda install, etc.
 git clone https://github.com/jluebeck/ecSimulator.git
 ```
 
-Users will also need the reference genome fasta file for hg19, GRCh37 or GRCh38 (hg38).
+A reference genome fasta file for hg19, GRCh37 or GRCh38 (hg38) is also required.
 These are available in the [AmpliconArchitect data repo](https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/) for users who may already have that tool installed.
 
-The memory an CPU requirements of ecSimulator are minimal, but please try to have more than 4Gb RAM
-available. The simulator should finish within 30s-1min for typical simulation runs. Simulating
-thousands of structures may take slightly longer.
+#### Optional dependencies for read simulation:
+
+ecSimulator allows users to simulate nanopore reads from the resulting structures, using [NanoSim](https://github.com/bcgsc/NanoSim).
+Nanosim can be installed by performing
+```shell
+conda install -c bioconda nanosim
+```
+
+#### Computing requirements:
+The memory an CPU requirements of ecSimulator are minimal, but please try to have more than 4Gb RAM available. The simulator should finish within 30s-1min for typical simulation runs.
+Simulating thousands of structures may take slightly longer.
 
 ### Usage
+#### Focal amplification simulation:
 An example command to generate an ecDNA of episomal origin with at least two non-overlapping genomic segments
 with default SV frequencies:
 ```shell
@@ -41,8 +45,14 @@ Or with customized simulation parameters:
 ecSimulator/src/ecSimulator.py --ref_name GRCh38 --ref_fasta /path/to/hg38.fa --config_file /path/to/your_config.yaml -o test
 ```
 
-### Options
+#### Nanopore read simulation:
 
+To simulate Nanopore reads from the simulated focal amplification (using NanoSim), you can do the following
+```shell
+ecSimulator/src/run_nanosim.py -o test_amplicon_1_read_sim --amplicon_fasta test_amplicon1.fasta --amplicon_coverage 1
+```
+
+### Options
 ecSimulator takes the following command-line arguments:
 
 - `--ref_name [one of hg19, GRCh37, GRCh38]`: Name of reference build.
@@ -82,3 +92,11 @@ sv_probs:  # probability this type of SV occurs during the iterative rearrangeme
 ```
 
 ecSimulator is designed to keep ecDNA from getting approximately 20% larger or smaller than the target size, so the actual duplication and deletion probabilities in the simulated ecDNA may be lower than specified by user. 
+
+### Outputs
+ecSimulator create the following:
+* Fasta file encoding the simulated ecDNA structure.
+* AmpliconArchitect `_cycles.txt` file, encoding the order and orientation of the genomic segments.
+* AmpliconArchitect `_graph.txt` file, encoding the genomic segments and SVs (breakpoint graph).
+
+The Nanosim process will create two fastq files (aligned.fastq and unaligned.fastq) and a file describing the locations of the errors in the reads. A complete description of these files is available [here](https://github.com/bcgsc/NanoSim#2-simulation-stage-1). 

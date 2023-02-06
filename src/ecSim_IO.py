@@ -49,7 +49,7 @@ def readFasta(fname, ref_name, chrSet=None):
         currPos = 0
         faiter = (x[1] for x in groupby(infile, lambda line: line[0] == ">"))
         for header in faiter:
-            name = next(header)[1:].rstrip()
+            name = next(header)[1:].rstrip().rsplit()[0]
             seq = "".join(s.rstrip() for s in next(faiter))
             if name in chrSet:
                 print(name)
