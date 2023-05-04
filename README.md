@@ -2,7 +2,7 @@
 
 ### Introduction
 ecSimulator simulates ecDNA genome structures with user-specifiable parameters for SV frequencies, size, and mechanism
-of origin.
+of origin. Users can invoke a read simulator on the simulated structures to generate simulated sequencing data.
 
 It takes as input a reference genome fasta and a yaml configuration file.
 
