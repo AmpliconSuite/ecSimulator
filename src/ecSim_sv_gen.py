@@ -190,10 +190,12 @@ def assign_bps(amp_intervals, flankingLength, num_breakpoints):
 
 
 def conduct_EC_SV(segL, num_breakpoints, sv_probs):
+    intermediates = []
+    intermediates.append(copy.deepcopy(segL))
     newSegL = copy.deepcopy(segL)
     origUniqueSegs = len(segL)
     if origUniqueSegs == 1:
-        return newSegL
+        return [newSegL, ]
 
     origLength = float(sum(s.size for s in segL))
     delProb, dupProb, invProb, transProb, fbackProb = sv_probs["del"], sv_probs["dup"], sv_probs["inv"], sv_probs["trans"], sv_probs["fback"]
@@ -208,10 +210,10 @@ def conduct_EC_SV(segL, num_breakpoints, sv_probs):
         print(lenDiff)
         meanSegsTogether = int(math.ceil(math.log2(len(newSegL))))
 
-        # select runif strtpoint
         zeroLen = True
         manipSegs, unManipSegs, manipLen, numSegs, loopedEndI = [], [], 0, 0, 0
         while zeroLen:
+            # select random uniform startpoint
             strtP = r.randint(0, len(newSegL))
             # poisson seg nums
             numSegs = r.poisson(meanSegsTogether - 1) + 1
@@ -230,7 +232,8 @@ def conduct_EC_SV(segL, num_breakpoints, sv_probs):
         delAllowed = (currSafeIds == safeIds)
 
         # deletion
-        # print(delAllowed,delProb,(manipLen - lenDiff) / origLength, currUniqueSegs / origUniqueSegs, float(len(manipSegs)) / len(newSegL))
+        # print(delAllowed,delProb,(manipLen - lenDiff) / origLength, currUniqueSegs / origUniqueSegs,
+        # float(len(manipSegs)) / len(newSegL))
         if delAllowed and r.random() < delProb and (manipLen - lenDiff) / origLength < 0.2 and \
                 currUniqueSegs / origUniqueSegs > 0.4 and float(len(manipSegs)) / len(newSegL) <= 0.4:
             newSegL = unManipSegs
@@ -252,7 +255,7 @@ def conduct_EC_SV(segL, num_breakpoints, sv_probs):
 
                 # is duplicated
                 if r.random() < dupProb and (currLength + manipLen) / origLength < 1.3:
-                    print(manipLen,lenDiff,origLength,(currLength + manipLen) / origLength)
+                    print(manipLen, lenDiff, origLength, (currLength + manipLen) / origLength)
                     dup = True
 
                 # is inverted
@@ -290,9 +293,11 @@ def conduct_EC_SV(segL, num_breakpoints, sv_probs):
                 else:
                     newSegL = unManipSegs + manipSegs
 
+            intermediates.append(copy.deepcopy(newSegL))
+
     print(",".join([str(x.seg_id) + "+" if x.direction == 1 else str(x.seg_id) + "-" for x in newSegL]) + "\n")
     logging.info("Final size: " + str(sum(s.size for s in newSegL)))
-    return newSegL
+    return intermediates
 
 
 # def restrictedExponential(mean, minV, maxV):
