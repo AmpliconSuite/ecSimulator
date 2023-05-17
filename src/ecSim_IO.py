@@ -1,5 +1,6 @@
-from itertools import groupby
 from collections import Counter, defaultdict, namedtuple
+from itertools import groupby
+import os
 
 from intervaltree import Interval, IntervalTree
 
@@ -52,7 +53,7 @@ def readFasta(fname, ref_name, chrSet=None):
             name = next(header)[1:].rstrip().rsplit()[0]
             seq = "".join(s.rstrip() for s in next(faiter))
             if name in chrSet:
-                print(name)
+                # print(name)
                 seqD[name] = seq
                 seqStartIndices.append((name, currPos))
                 currPos+=len(seq)
@@ -63,8 +64,32 @@ def readFasta(fname, ref_name, chrSet=None):
 def readChromSet(fname):
     return set(line.strip() for line in open(fname))
 
+
 # --------------------------------------------------------------------
 # Output methods
+
+def write_outputs(output_prefix, amp_num, raw_intervals, bp_intervals, all_amplicons, isCircular):
+    final_amplicon = all_amplicons[-1]
+    cycle_fname = output_prefix + "_amplicon" + amp_num + "_cycles.txt"
+    graph_fname = output_prefix + "_amplicon" + amp_num + "_graph.txt"
+    write_cycles_file(raw_intervals, bp_intervals, final_amplicon, cycle_fname, isCircular)
+    write_bpg_file(bp_intervals, final_amplicon, graph_fname, isCircular)
+    write_amplicon_fasta(final_amplicon, output_prefix + "_amplicon" + amp_num + ".fasta", amp_num)
+
+    # make a directory for the intermediate structures
+    intermed_outdir = os.path.dirname(output_prefix) + "/intermediate_structures/"
+    if not os.path.exists(intermed_outdir):
+        os.makedirs(intermed_outdir)
+
+    intermed_basepre = intermed_outdir + os.path.basename(output_prefix)
+    for ind, intermed_amplicon in enumerate(all_amplicons[1:-1]):  # index 0 is reference genome segs, index -1 is the final genome
+        intermed_prefix = intermed_basepre + "_intermediate" + str(ind+1)
+        cycle_fname = intermed_prefix + "_amplicon" + amp_num + "_cycles.txt"
+        graph_fname = intermed_prefix + "_amplicon" + amp_num + "_graph.txt"
+        write_cycles_file(raw_intervals, bp_intervals, intermed_amplicon, cycle_fname, isCircular)
+        write_bpg_file(bp_intervals, intermed_amplicon, graph_fname, isCircular)
+        write_amplicon_fasta(intermed_amplicon, output_prefix + "_amplicon" + amp_num + ".fasta", amp_num)
+
 
 def write_cycles_file(raw_intervals, bp_intervals, amplicon, outname, isCircular):
     with open(outname,'w') as outfile:

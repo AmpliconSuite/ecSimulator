@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
-__version__ = "0.4"
-__author__ = "Jens Luebeck (jluebeck [ at] ucsd.edu)"
+__version__ = "0.5.2"
+__author__ = "Jens Luebeck (jluebeck [ at] eng.ucsd.edu)"
 
 import argparse
-import os
+import json
 import sys
 import yaml
 
 if sys.version_info[0] < 3:
-    raise Exception("Must use Python 3")
+    raise Exception("ecSimulator requires Python 3")
 
 from ecSim_IO import *
 from ecSim_sv_gen import *
@@ -38,7 +38,7 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
         logging.info("Setting random seed to " + str(sim_config["random_seed"]))
 
     # read the reference genome
-    print("Reading ref")
+    print("Loading ref genome")
     seqD, seqStartInds, ref_gsize = readFasta(ref_fasta, chrSet)
     if sim_config["viral_insertion"]:
         # read the viral genome
@@ -118,20 +118,16 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
         padded_raw_intervals = get_padded_intervals(raw_intervals, seqD, flanking_length)
         all_padded_intervals.extend(padded_raw_intervals)
 
-
         if sim_config["allow_interval_reuse"]:
             used_intervals.clear()
 
         bp_intervals = assign_bps(raw_intervals, min_segment_size, num_breakpoints)
 
         logging.info("Doing simulation")
-        rearranged_amplicon = conduct_EC_SV(bp_intervals, num_breakpoints, sim_config["sv_probs"])
+        rearranged_amplicon_list = conduct_EC_SV(bp_intervals, num_breakpoints, sim_config["sv_probs"])
 
-        cycle_fname = output_prefix + "_amplicon" + amp_num + "_cycles.txt"
-        graph_fname = output_prefix + "_amplicon" + amp_num + "_graph.txt"
-        write_cycles_file(raw_intervals, bp_intervals, rearranged_amplicon, cycle_fname, isCircular)
-        write_bpg_file(bp_intervals, rearranged_amplicon, graph_fname, isCircular)
-        write_amplicon_fasta(rearranged_amplicon, output_prefix + "_amplicon" + amp_num + ".fasta", amp_num)
+        logging.info("Writing output files")
+        write_outputs(output_prefix, amp_num, raw_intervals, bp_intervals, rearranged_amplicon_list, isCircular)
 
     merged_padded_raw_intervals = merge_gIntervals(all_padded_intervals, seqD)
     merged_intervals_fname = output_prefix + "_background_intervals.fasta"
@@ -140,7 +136,7 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Simulate ecDNA genome structures.")
-    parser.add_argument("--ref_name", help="Reference genome version.", choices=["hg19", "GRCh37", "GRCh38"],
+    parser.add_argument("--ref_name", help="Reference genome version.", choices=["hg19", "GRCh37", "GRCh38", "mm10"],
                         required=True)
     parser.add_argument("--ref_fasta", help="Reference genome fasta.", required=True)
     parser.add_argument("--config_file", help="Path to config file for run. "
@@ -154,19 +150,33 @@ if __name__ == '__main__':
         print("ecSimulator: version " + __version__)
         print("author: " + __author__)
 
+    args.output_prefix = os.path.abspath(args.output_prefix)
+    foundPrevLog = os.path.exists(args.output_prefix + ".log")
+
     logging.basicConfig(filename=args.output_prefix + '.log', format='%(asctime)s %(levelname)-8s %(message)s',
                         level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S', filemode='w')
-
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     logging.info("ecSimulator " + __version__)
+    if foundPrevLog:
+        logging.warning("\nFound a previous log file of the same name as the current run! ecSimulator does not clear "
+                        "previous files when re-running with the same output prefix. There may be old results mixed "
+                        "in with your new results.\n")
+
     logging.info("Using command line args: ")
     logging.info(" ".join(sys.argv[1:]))
-
     if not args.config_file:
         args.config_file = SRC_DIR + "/default_config.yaml"
 
     logging.info("Loading YAML config file from " + args.config_file)
     with open(args.config_file) as f:
         sim_config = yaml.safe_load(f)
+
+    logging.info("\nContents of the config YAML were as follows:")
+    logging.info(yaml.dump(sim_config, default_flow_style=False))
+
+    logging.info("Results will be stored with prefix " + args.output_prefix)
+    if not os.path.exists(os.path.dirname(args.output_prefix)):
+        os.makedirs(os.path.dirname(args.output_prefix))
 
     run_sim(LC_DIR, args.ref_name, args.ref_fasta, sim_config, args.num_amplicons, args.output_prefix)
 

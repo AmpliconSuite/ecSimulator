@@ -1,14 +1,14 @@
 random_seed: 0
-mean_segment_size: 150000 # refers to the average distance between breakpoints.
 target_size: 2000000  # target ecDNA mode amplicon size in bp
-viral_insertion: False
-viral_strain: "hpv16.fasta"
+origin: "episome"  # can be either episome, chromothripsis, tst, or bfb.
+mean_segment_size: 150000 # refers to the average distance between breakpoints.
+num_breakpoints: "auto"
 num_intervals: 2  # number of non-overlapping genomic regions to generate an amplicon with
 same_chromosome: False  # if num_intervals > 1, require intervals to be sampled from the same chromosome.
-num_breakpoints: "auto"
 allow_interval_reuse: True  # Allow different amplicons to use the same intervals
-origin: "episome"  # can be either episome, chromothripsis, tst, or bfb.
 overlap_bed: ""  # specify a path to a bed file of regions the amplicon must overlap.
+viral_insertion: False
+viral_strain: "hpv16.fasta"
 sv_probs:
   del: 0.6
   dup: 0.5
