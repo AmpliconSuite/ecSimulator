@@ -84,7 +84,7 @@ The ecDNA structure simulations performed by ecSimulator can be customized a num
 ```yaml
 random_seed: 0  # sets a seed for the simulator, set to 'None' for random seed.
 target_size: 2000000  # target size for the ecDNA size, in basepairs. Target size is approximate due to duplications and deletions.
-origin: "episome"  # type of ecDNA to simulate. Can be "episome", "chromothripsis", or "tst".
+origin: "episome"  # can be either episome, chromothripsis, or two-foldback.
 mean_segment_size: 150000
 num_breakpoints: "auto"  # number of breakpoints to assign inside the amplicon (approximate). 
 num_intervals: 2  # number of non-overlapping genomic regions to use for the amplicon. Breakpoints will be assigned within these larger intervals. Recommend setting to "auto" if origin is not "episome".

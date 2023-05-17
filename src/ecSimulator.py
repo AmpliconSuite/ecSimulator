@@ -67,13 +67,13 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
 
     sameChrom = sim_config["same_chromosome"] is True
     origin = sim_config["origin"].lower()
-    allowed_origins = ["episome", "chromothripsis", "tst", "bfb"]
+    allowed_origins = ["episome", "chromothripsis", "two-foldback", "bfb"]
     if not origin in allowed_origins:
         logging.error("Argument for 'origin' in yaml file must be one of " + str(allowed_origins))
         sys.exit(1)
 
     if sim_config["num_intervals"] == "auto":
-        nIntervals = 1  # episomal or tst
+        nIntervals = 1  # episomal or two-foldback
         if origin == "chromothripsis":
             nIntervals = 10
             sameChrom = True

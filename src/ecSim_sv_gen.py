@@ -139,7 +139,7 @@ def select_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT
         for ind, x in enumerate(intervals):
             x.seg_id = ind + 1
 
-    elif origin == "tst":
+    elif origin == "two-foldback":
         intervals = sorted(intervals, key=lambda x: (x.chrom, x.start))
         for ind, x in enumerate(intervals):
             x.seg_id = ind + 1
