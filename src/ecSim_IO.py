@@ -117,7 +117,6 @@ def write_bpg_file(bp_intervals, amplicon, outname, isCircular, write_dt):
     dirToChar = {-1: "-", 1: "+"}
     with open(outname, 'w') as outfile:
         outfile.write("# ecSimulator " + write_dt + "\n")
-        outfile.write("# ecSimulator\n")
         outfile.write("SequenceEdge: StartPosition, EndPosition, PredictedCopyCount, AverageCoverage, Size, "
                       "NumberReadsMapped\n")
 
