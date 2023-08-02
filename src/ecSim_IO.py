@@ -114,6 +114,7 @@ def write_bpg_file(bp_intervals, amplicon, outname, isCircular):
     dirToChar = {-1: "-", 1: "+"}
 
     with open(outname, 'w') as outfile:
+        outfile.write("# Graph file written by ecSimulator\n")
         outfile.write("SequenceEdge: StartPosition, EndPosition, PredictedCopyCount, AverageCoverage, Size, "
                       "NumberReadsMapped\n")
 
