@@ -6,7 +6,7 @@ of origin. Users can invoke a read simulator on the simulated structures to gene
 
 It takes as input a reference genome fasta and a yaml configuration file.
 
-The latest version of ecSimulator is **0.5.2**.
+The latest version of ecSimulator is **0.6.0**.
 
 ## Requirements and Installation
 ### Basic requirements:
@@ -85,7 +85,8 @@ The ecDNA structure simulations performed by ecSimulator can be customized a num
 random_seed: 0  # sets a seed for the simulator, set to 'None' for random seed.
 target_size: 2000000  # target size for the ecDNA size, in basepairs. Target size is approximate due to duplications and deletions.
 origin: "episome"  # can be either episome, chromothripsis, or two-foldback.
-mean_segment_size: 150000
+mean_segment_size: 150000  # refers to the average distance between breakpoints.
+min_segment_size: 1000  # minimum segment length allowed between breakpoints
 num_breakpoints: "auto"  # number of breakpoints to assign inside the amplicon (approximate). 
 num_intervals: 2  # number of non-overlapping genomic regions to use for the amplicon. Breakpoints will be assigned within these larger intervals. Recommend setting to "auto" if origin is not "episome".
 same_chromosome: False  # Allow intervals to be sampled from multiple different chromosomes (if num_intervals > 1).

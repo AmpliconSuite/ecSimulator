@@ -88,8 +88,8 @@ def write_outputs(output_prefix, amp_num, raw_intervals, bp_intervals, all_ampli
         intermed_prefix = intermed_basepre + "_intermediate" + str(ind+1)
         cycle_fname = intermed_prefix + "_amplicon" + amp_num + "_cycles.txt"
         graph_fname = intermed_prefix + "_amplicon" + amp_num + "_graph.txt"
-        write_cycles_file(raw_intervals, bp_intervals, intermed_amplicon, cycle_fname, isCircular)
-        write_bpg_file(bp_intervals, intermed_amplicon, graph_fname, isCircular)
+        write_cycles_file(raw_intervals, bp_intervals, intermed_amplicon, cycle_fname, isCircular, write_dt)
+        write_bpg_file(bp_intervals, intermed_amplicon, graph_fname, isCircular, write_dt)
         write_amplicon_fasta(intermed_amplicon, output_prefix + "_amplicon" + amp_num + ".fasta", amp_num)
 
 

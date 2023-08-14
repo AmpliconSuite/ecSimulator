@@ -2,6 +2,7 @@ random_seed: 0
 target_size: 2000000  # target ecDNA mode amplicon size in bp
 origin: "episome"  # can be either episome, chromothripsis, or two-foldback.
 mean_segment_size: 150000 # refers to the average distance between breakpoints.
+min_segment_size: 1000 # smallest possible genomic segment between breakpoints
 num_breakpoints: "auto"
 num_intervals: 2  # number of non-overlapping genomic regions to generate an amplicon with
 same_chromosome: False  # if num_intervals > 1, require intervals to be sampled from the same chromosome.

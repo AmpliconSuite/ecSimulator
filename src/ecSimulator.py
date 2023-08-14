@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.5.2"
+__version__ = "0.6.0"
 __author__ = "Jens Luebeck (jluebeck [ at] eng.ucsd.edu)"
 
 import argparse
@@ -14,10 +14,6 @@ if sys.version_info[0] < 3:
 from ecSim_IO import *
 from ecSim_sv_gen import *
 
-min_segment_size = 1000
-min_interval_size = 10000
-max_interval_size = 20000000
-flanking_length = 100000
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 PROG_DIR = SRC_DIR[:SRC_DIR.rindex('/')]
 LC_DIR = PROG_DIR + "/low_comp_regions/"
@@ -25,6 +21,13 @@ VIR_DIR = PROG_DIR + "/oncoviruses/"
 
 
 def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefix):
+    # set some defaults
+    min_seg_size = 1000
+    mean_seg_size = 150000.  # refers to the average distance between breakpoints.
+    min_interval_size = 10000
+    max_interval_size = 20000000
+    flanking_length = 100000
+
     # get the list of chromosomes for this sample
     chrSet = readChromSet(LC_DIR + ref_name + "_chroms.txt")
 
@@ -59,11 +62,13 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
     target_size = sim_config["target_size"]
     if "mean_segment_size" in sim_config:
         mean_seg_size = sim_config["mean_segment_size"]
-    else:
-        mean_seg_size = 150000.0  # refers to the average distance between breakpoints.
+
+    if "min_segment_size" in sim_config:
+        min_seg_size = sim_config["min_segment_size"]
 
     if sim_config["viral_insertion"] and sim_config["num_breakpoints"] == "auto":
         mean_seg_size = target_size / 13.0
+        logging.info("Adjusting mean segement size for viral insertion case: " + str(mean_seg_size) + "bp")
 
     sameChrom = sim_config["same_chromosome"] is True
     origin = sim_config["origin"].lower()
@@ -121,7 +126,7 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
         if sim_config["allow_interval_reuse"]:
             used_intervals.clear()
 
-        bp_intervals = assign_bps(raw_intervals, min_segment_size, num_breakpoints)
+        bp_intervals = assign_bps(raw_intervals, min_seg_size, num_breakpoints)
 
         logging.info("Doing simulation")
         rearranged_amplicon_list = conduct_EC_SV(bp_intervals, num_breakpoints, sim_config["sv_probs"])
