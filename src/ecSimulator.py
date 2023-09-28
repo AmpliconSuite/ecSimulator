@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 
-__version__ = "0.6.0"
-__author__ = "Jens Luebeck (jluebeck [ at] eng.ucsd.edu)"
-
 import argparse
 import json
 import sys
@@ -13,6 +10,7 @@ if sys.version_info[0] < 3:
 
 from ecSim_IO import *
 from ecSim_sv_gen import *
+from _version import __version__, __author__
 
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 PROG_DIR = SRC_DIR[:SRC_DIR.rindex('/')]
@@ -36,14 +34,14 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
                                  LC_DIR + ref_name + "_wgMapabilityExcludable.bed")
 
     # set the random seed if requested
-    if sim_config["random_seed"] is not None:
+    if "random_seed" in sim_config and sim_config["random_seed"] is not None:
         r.seed(sim_config["random_seed"])
         logging.info("Setting random seed to " + str(sim_config["random_seed"]))
 
     # read the reference genome
     print("Loading ref genome")
     seqD, seqStartInds, ref_gsize = readFasta(ref_fasta, chrSet)
-    if sim_config["viral_insertion"]:
+    if "viral_insertion" in sim_config and sim_config["viral_insertion"]:
         # read the viral genome
         logging.info("Viral insertion amplicon: " + sim_config["viral_strain"])
         viralSeqD, viralSeqStartInds, vir_gsize = readFasta(VIR_DIR + sim_config["viral_strain"],
@@ -56,6 +54,7 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
 
     else:
         viralName, viralSeq = "", ""
+        sim_config["viral_insertion"] = None
 
     # set target size
     isCircular = True
@@ -66,11 +65,24 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
     if "min_segment_size" in sim_config:
         min_seg_size = sim_config["min_segment_size"]
 
+    # set some defaults
+    if not "num_breakpoints" in sim_config:
+        sim_config["num_breakpoints"] = "auto"
+
+    if not "same_chromosome" in sim_config:
+        sim_config["same_chromosome"] = False
+
+    if not "origin" in sim_config:
+        sim_config["origin"] = "episome"
+
+    if not "num_intervals" in sim_config:
+        sim_config["num_intervals"] = "auto"
+
     if sim_config["viral_insertion"] and sim_config["num_breakpoints"] == "auto":
         mean_seg_size = target_size / 13.0
         logging.info("Adjusting mean segement size for viral insertion case: " + str(mean_seg_size) + "bp")
 
-    sameChrom = sim_config["same_chromosome"] is True
+    sameChrom = eval(str(sim_config["same_chromosome"]))
     origin = sim_config["origin"].lower()
     allowed_origins = ["episome", "chromothripsis", "two-foldback", "bfb"]
     if not origin in allowed_origins:
@@ -109,15 +121,20 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
         else:
             num_breakpoints = int(sim_config["num_breakpoints"])
 
-        interval_sizes = compute_interval_sizes(nIntervals, target_size, min_interval_size, max_interval_size)
+        if sim_config["origin"] == "two-foldback":
+            adj_target_size = target_size//2
+        else:
+            adj_target_size = target_size
+
+        interval_sizes = compute_interval_sizes(nIntervals, adj_target_size, min_interval_size, max_interval_size)
         logging.info("Num breakpoints: " + str(num_breakpoints))
         logging.info("Interval sizes: " + str(interval_sizes))
         raw_intervals = select_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT,
                             used_intervals, sameChrom, origin, overlap_regions, viralName, viralSeq)
 
-        logging.info("Selected intervals:")
-        for y in raw_intervals:
-            logging.info(str(y))
+        # logging.info("Selected intervals:")
+        # for y in raw_intervals:
+        #     logging.info(str(y))
 
         # write a fasta of the background intervals (intervals + padding)
         padded_raw_intervals = get_padded_intervals(raw_intervals, seqD, flanking_length)
@@ -129,7 +146,7 @@ def run_sim(LC_DIR, ref_name, ref_fasta, sim_config, num_amplicons, output_prefi
         bp_intervals = assign_bps(raw_intervals, min_seg_size, num_breakpoints)
 
         logging.info("Doing simulation")
-        rearranged_amplicon_list = conduct_EC_SV(bp_intervals, num_breakpoints, sim_config["sv_probs"])
+        rearranged_amplicon_list = conduct_EC_SV(bp_intervals, num_breakpoints, sim_config["sv_probs"], sim_config["origin"])
 
         logging.info("Writing output files")
         write_outputs(output_prefix, amp_num, raw_intervals, bp_intervals, rearranged_amplicon_list, isCircular)
@@ -176,7 +193,7 @@ if __name__ == '__main__':
     with open(args.config_file) as f:
         sim_config = yaml.safe_load(f)
 
-    logging.info("\nContents of the config YAML were as follows:")
+    logging.info("\nContents of the config YAML were as follows:\n")
     logging.info(yaml.dump(sim_config, default_flow_style=False))
 
     logging.info("Results will be stored with prefix " + args.output_prefix)

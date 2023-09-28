@@ -44,7 +44,7 @@ def get_padded_intervals(intervals, seqD, flanking_length):
 
         flanked_start = max(0, ival.start - flanking_length)
         flanked_end = min(ival.end + flanking_length, len(seqD[ival.chrom]) - 1)
-        flanked_seq = seqD[ival.chrom][flanked_start:flanked_end]
+        flanked_seq = seqD[ival.chrom][flanked_start:flanked_end + 1]
         padded_intervals.append(gInterval(ival.chrom, flanked_start, flanked_end, flanked_seq, ival.seg_id))
 
     return padded_intervals
@@ -61,7 +61,8 @@ def select_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT
 
     chrom_snames, chrom_sposns = map(list, zip(*seqStartInds))
     chrom_sposns.append(ref_gsize)
-    for s in interval_sizes:
+    for unadj_s in interval_sizes:
+        s = unadj_s - 1
         foundInt = False
         iters = 0
         while not foundInt and iters < 20000:
@@ -88,7 +89,7 @@ def select_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT
                     normEnd = init_end + rpad
 
                 if not used_intervals[schrom].overlaps(normStart, normEnd):
-                    currSeq = seqD[schrom][normStart:normEnd]
+                    currSeq = seqD[schrom][normStart:normEnd+1]
                     if "N" not in currSeq:
                         foundInt = True
                         logging.info("Identified an interval in " + str(iters) + " iterations")
@@ -113,12 +114,12 @@ def select_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT
                         normStart = spos - chrom_sposns[sposn_index]
                         normEnd = epos - chrom_sposns[sposn_index]
                         if not excIT[schrom][normStart:normEnd] and not used_intervals[schrom].overlaps(normStart, normEnd):
-                            currSeq = seqD[schrom][normStart:normEnd]
+                            currSeq = seqD[schrom][normStart:normEnd+1]
                             if "N" not in currSeq:
                                 foundInt = True
                                 logging.info("Identified an interval in " + str(iters) + " iterations")
                                 seg_id = len(intervals)+1
-                                intervals.append(gInterval(schrom, normStart + 1, normEnd + 1, currSeq, seg_id))
+                                intervals.append(gInterval(schrom, normStart, normEnd, currSeq, seg_id))
                                 used_intervals[schrom].addi(normStart, normEnd)
 
         if not foundInt:
@@ -134,21 +135,10 @@ def select_interval_regions(interval_sizes, ref_gsize, seqStartInds, seqD, excIT
         vInt.is_chromosomal = False
         intervals.append(vInt)
 
-    if origin == "chromothripsis":
+    if origin == "chromothripsis" or origin == "two-foldback":
         intervals = sorted(intervals, key=lambda x: (x.chrom, x.start))
         for ind, x in enumerate(intervals):
             x.seg_id = ind + 1
-
-    elif origin == "two-foldback":
-        intervals = sorted(intervals, key=lambda x: (x.chrom, x.start))
-        for ind, x in enumerate(intervals):
-            x.seg_id = ind + 1
-        rev_ints = copy.deepcopy(intervals)[::-1]
-        for x in rev_ints:
-            x.direction = -1
-            x.seq = str(x.reverse_complement())
-
-        intervals = intervals + rev_ints
 
     logging.info("Selected intervals: ")
     for ival in intervals:
@@ -189,9 +179,8 @@ def assign_bps(amp_intervals, flankingLength, num_breakpoints):
     return bp_intervals
 
 
-def conduct_EC_SV(segL, num_breakpoints, sv_probs):
-    intermediates = []
-    intermediates.append(copy.deepcopy(segL))
+def conduct_EC_SV(segL, num_breakpoints, sv_probs, origin):
+    intermediates = [copy.deepcopy(segL), ]  # this stores the intermediate structures from each step
     newSegL = copy.deepcopy(segL)
     origUniqueSegs = len(segL)
     if origUniqueSegs == 1:
@@ -202,6 +191,18 @@ def conduct_EC_SV(segL, num_breakpoints, sv_probs):
     safeIds = set([x.seg_id for x in newSegL if x.preserve])
 
     i = 0
+    if origin == "two-foldback":
+        rev_ints = copy.deepcopy(newSegL[::-1])
+        for x in rev_ints:
+            x.direction = -1
+            x.seq = str(x.reverse_complement())
+
+        newSegL = newSegL + rev_ints
+        intermediates.append(copy.deepcopy(newSegL))
+        origLength*=2
+        logging.info("initialized two-foldback case")
+        i+=1
+
     while i < int(math.ceil(num_breakpoints/2.0)):
         logging.info(",".join([str(x.seg_id) + "+" if x.direction == 1 else str(x.seg_id) + "-" for x in newSegL]) + "\n")
         currUniqueSegs = len(set(newSegL))
@@ -238,6 +239,7 @@ def conduct_EC_SV(segL, num_breakpoints, sv_probs):
                 currUniqueSegs / origUniqueSegs > 0.4 and float(len(manipSegs)) / len(newSegL) <= 0.4:
             newSegL = unManipSegs
             i += 1
+            logging.info(",".join([str(x.seg_id) + "+" if x.direction == 1 else str(x.seg_id) + "-" for x in manipSegs]) + " | " + str(manipLen))
             logging.debug("del")
 
         # other SV
@@ -293,7 +295,11 @@ def conduct_EC_SV(segL, num_breakpoints, sv_probs):
                 else:
                     newSegL = unManipSegs + manipSegs
 
-            intermediates.append(copy.deepcopy(newSegL))
+        intermediates.append(copy.deepcopy(newSegL))
+        # logging.debug(
+        #     ",".join([str(x.seg_id) + "+" if x.direction == 1 else str(x.seg_id) + "-" for x in newSegL]) + "\n")
+        # for x in newSegL:
+        #     print(str(x), len(x.seq))
 
     intermediates.append(copy.deepcopy(newSegL))
     logging.info(",".join([str(x.seg_id) + "+" if x.direction == 1 else str(x.seg_id) + "-" for x in newSegL]) + "\n")

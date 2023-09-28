@@ -87,14 +87,14 @@ target_size: 2000000  # target size for the ecDNA size, in basepairs. Target siz
 origin: "episome"  # can be either episome, chromothripsis, or two-foldback.
 mean_segment_size: 150000  # refers to the average distance between breakpoints.
 min_segment_size: 1000  # minimum segment length allowed between breakpoints
-num_breakpoints: "auto"  # number of breakpoints to assign inside the amplicon (approximate). 
+num_breakpoints: "auto"  # number of breakpoints to assign inside the amplicon (approximate). Does not count initial breakpoints to form & circularize interval 
 num_intervals: 2  # number of non-overlapping genomic regions to use for the amplicon. Breakpoints will be assigned within these larger intervals. Recommend setting to "auto" if origin is not "episome".
 same_chromosome: False  # Allow intervals to be sampled from multiple different chromosomes (if num_intervals > 1).
 allow_interval_reuse: True  # allow different amplicons from the run to re-use some of the same genomic coordinates.
 overlap_bed: ""  # specify a path to a bed file of regions the amplicon must overlap.
 viral_insertion: False  # create a hybrid human-viral ecDNA
 viral_strain: "hpv16.fasta"  # Only used if viral_insertion is 'True'. Specify the name of the viral strain to be used from the oncoviruses directory.
-sv_probs:  # probability this type of SV occurs during the iterative rearrangement process.
+sv_probs:  # probability this type of SV occurs during the iterative rearrangement process. Not mutually exclusive events.
   del: 0.6
   dup: 0.5
   inv: 0.4
@@ -112,9 +112,13 @@ ecSimulator is designed to keep ecDNA from getting approximately 20% larger or s
 * AmpliconArchitect-formatted `_cycles.txt` file, encoding the order and orientation of the genomic segments.
 * AmpliconArchitect-formatted `_graph.txt` file, encoding the genomic segments and SVs (breakpoint graph).
 
+Coordinates reported in the output files are based.
+
 ### Intermediate structures
 ecSimulator will also create a directory of the intermediate structures from the simulation, containing the same files as described above for the final amplicon, but also for each intermediate structure created during the simulation.
-This can be useful if you later want to create mixtures of heterogenous but highly similar amplicons.
+This can be useful if you later want to create mixtures of heterogeneous but highly similar amplicons. 
+
+**Users can use the `cycles_file_to_fasta.py` script to convert any intermediate (or generally, any) AA-formatted `_cycles.txt` file to a fasta.**
 
 The Nanosim process will create two fastq files (aligned.fastq and unaligned.fastq) and a file describing the locations of the errors in the reads. A complete description of these files is available [here](https://github.com/bcgsc/NanoSim#2-simulation-stage-1).
 

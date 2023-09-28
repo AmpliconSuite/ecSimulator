@@ -5,6 +5,8 @@ import os
 
 from intervaltree import Interval, IntervalTree
 
+from _version import __version__
+
 
 Bpoint = namedtuple("Bpoint", "chrom pos")
 
@@ -95,7 +97,7 @@ def write_outputs(output_prefix, amp_num, raw_intervals, bp_intervals, all_ampli
 
 def write_cycles_file(raw_intervals, bp_intervals, amplicon, outname, isCircular, write_dt):
     with open(outname,'w') as outfile:
-        outfile.write("# ecSimulator " + write_dt + "\n")
+        outfile.write("# ecSimulator " + __version__ + " " + write_dt + "\n")
         for ival in raw_intervals:
             outline = "\t".join(["Interval", str(ival.seg_id), ival.chrom, str(ival.start), str(ival.end)]) + "\n"
             outfile.write(outline)
@@ -116,7 +118,7 @@ def write_cycles_file(raw_intervals, bp_intervals, amplicon, outname, isCircular
 def write_bpg_file(bp_intervals, amplicon, outname, isCircular, write_dt):
     dirToChar = {-1: "-", 1: "+"}
     with open(outname, 'w') as outfile:
-        outfile.write("# ecSimulator " + write_dt + "\n")
+        outfile.write("# ecSimulator " + __version__ + " " + write_dt + "\n")
         outfile.write("SequenceEdge: StartPosition, EndPosition, PredictedCopyCount, AverageCoverage, Size, "
                       "NumberReadsMapped\n")
 
@@ -171,7 +173,7 @@ def write_amplicon_fasta(amplicon, outname, amp_num):
         for ival in amplicon:
             ampSeq+=ival.seq
 
-        outfile.write(ampSeq)
+        outfile.write(ampSeq + "\n")
 
 
 def write_interval_fasta(outname, intervals):

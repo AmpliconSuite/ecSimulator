@@ -3,7 +3,7 @@ import warnings
 
 from intervaltree import IntervalTree
 
-lookup = str.maketrans("ACGT", "TGCA")
+lookup = str.maketrans("ACGTRYKM", "TGCAYRMK")
 
 
 # take a list of gIntervals and merge them
@@ -45,10 +45,10 @@ class gInterval(object):
             warnings.warn("break_interval called on preserved segment")
             return self, gInterval("", 0, 0, "", -1)
 
-        a_s, a_e = self.start, self.start + relative_location - 1
-        b_s, b_e = self.start+relative_location, self.end
-        a_seq, b_seq = self.seq[:relative_location], self.seq[relative_location:]
-        a = gInterval(self.chrom, a_s, a_e, a_seq, -1)
-        b = gInterval(self.chrom, b_s, b_e, b_seq, -1)
+        a_s, a_e = self.start, self.start + relative_location
+        b_s, b_e = self.start+relative_location+1, self.end
+        a_seq, b_seq = self.seq[:relative_location+1], self.seq[relative_location+1:]
+        a = gInterval(self.chrom, a_s, a_e, a_seq, 0)
+        b = gInterval(self.chrom, b_s, b_e, b_seq, 0)
 
         return a, b
