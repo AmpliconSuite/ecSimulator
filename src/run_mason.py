@@ -4,12 +4,11 @@ Simulates short-read Illumina data from amplicon sequences using Mason.
 """
 
 import argparse
-from math import ceil
 from subprocess import call
 import os
 import sys
 
-from . import utilities
+from utilities import compute_number_of_reads_to_simulate, get_fasta_length
 
 
 def check_mason_path(mason_path=None):
@@ -35,12 +34,12 @@ def run_mason(fasta, mason_path, output_prefix, read_length, coverage, circ_or_l
     Returns:
         None. Call Mason to simulate data.
     """
-    fasta_length = utilities.get_fasta_length(fasta)
-    num_reads = str(utilities.compute_number_of_reads_to_simulate(coverage, fasta_length, read_length))
+    fasta_length = get_fasta_length(fasta)
+    num_reads = str(compute_number_of_reads_to_simulate(coverage, fasta_length, read_length))
 
     R1 = f"{output_prefix}_R1.fastq.gz"
     R2 = f"{output_prefix}_R2.fastq.gz"
-    cmd = "{} -ir {} -n {} --illumina-read_length {} --seq-technology illumina --num-threads {} -o {} -or {}".format(
+    cmd = "{} -ir {} -n {} --illumina-read-length {} --seq-technology illumina --num-threads {} -o {} -or {}".format(
         mason_path, fasta, num_reads, read_length, nthreads, R1, R2
     )
 

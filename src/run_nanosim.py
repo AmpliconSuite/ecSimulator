@@ -6,7 +6,7 @@ from subprocess import call
 import os
 import sys
 
-from . import utilities
+from utilities import compute_number_of_reads_to_simulate, get_fasta_length
 
 # this script will run the nanosim pipeline to simulate nanopore reads from ecDNA and background genome.
 # it assumes nanosim is installed and its scripts are on the system path (true if installed by conda).
