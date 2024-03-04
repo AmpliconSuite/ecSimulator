@@ -6,7 +6,7 @@ from subprocess import call
 import os
 import sys
 
-from . import utililties
+from . import utilities
 
 # this script will run the nanosim pipeline to simulate nanopore reads from ecDNA and background genome.
 # it assumes nanosim is installed and its scripts are on the system path (true if installed by conda).
@@ -23,8 +23,8 @@ def extract_nanosim_model(model_path):
 
 
 def run_nanosim(fasta, model_pre, output_pre, coverage, circ_or_linear, read_length_tuple, nthreads, seed=None):
-    fasta_length = utililties.get_fasta_length(fasta)
-    num_reads = str(utililties.compute_number_of_reads_to_simulate(coverage, fasta_length, model_mean_read_length))
+    fasta_length = utilities.get_fasta_length(fasta)
+    num_reads = str(utilities.compute_number_of_reads_to_simulate(coverage, fasta_length, model_mean_read_length))
 
     cmd = "simulator.py genome -rg {} -c {} -o {} -n {} -dna_type {} -t {} -b guppy --fastq".format(
         fasta, model_pre, output_pre, num_reads, circ_or_linear, str(nthreads))

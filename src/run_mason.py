@@ -9,6 +9,8 @@ from subprocess import call
 import os
 import sys
 
+from . import utilities
+
 
 def check_mason_path(mason_path=None):
     if not os.path.isfile(mason_path):
@@ -33,8 +35,8 @@ def run_mason(fasta, mason_path, output_prefix, read_length, coverage, circ_or_l
     Returns:
         None. Call Mason to simulate data.
     """
-    fasta_length = utililties.get_fasta_length(fasta)
-    num_reads = str(utililties.compute_number_of_reads_to_simulate(coverage, fasta_length, read_length))
+    fasta_length = utilities.get_fasta_length(fasta)
+    num_reads = str(utilities.compute_number_of_reads_to_simulate(coverage, fasta_length, read_length))
 
     R1 = f"{output_prefix}_R1.fastq.gz"
     R2 = f"{output_prefix}_R2.fastq.gz"
@@ -58,6 +60,7 @@ if __name__ == '__main__':
     parser.add_argument("--amplicon_coverage", type=float, help="Coverage for amplicon region - scale up to simulate "
                                                                 "higher amplicon CNs", required=True)
 
+    parser.add_argument("-l", "--read_length", help="Read length", type=int, default=150)
     parser.add_argument("--background_fasta", help="Fasta file of background genome regions. Do not provide if you want"
                                                    " reads from amplicon only")
     parser.add_argument("--background_coverage", type=float, help="Coverage for background region - scale up to "
