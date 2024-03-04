@@ -6,6 +6,8 @@ from subprocess import call
 import os
 import sys
 
+from . import utililties
+
 # this script will run the nanosim pipeline to simulate nanopore reads from ecDNA and background genome.
 # it assumes nanosim is installed and its scripts are on the system path (true if installed by conda).
 
@@ -16,32 +18,13 @@ def extract_nanosim_model(model_path):
     if not os.path.isdir(model_path):
         print("Extracting model files...")
         cmd = "tar -xzf {}".format(model_path + ".tar.gz")
-        print(cmd)
+        print(cmd) 
         call(cmd, shell=True)
 
 
-def get_fasta_length(fasta):
-    tlen = 0
-    with open(fasta) as infile:
-        for line in infile:
-            if line.startswith(">"):
-                continue
-
-            tlen+=len(line.rstrip())
-
-    print("Fasta size is " + str(tlen) + "bp")
-    return tlen
-
-
-def compute_number_of_reads_to_simulate(coverage, fasta_len, mean_rl):
-    nreads = int(ceil(coverage * fasta_len / mean_rl))
-    print("Number of reads to simulate for {}x coverage: {}".format(str(coverage), str(nreads)))
-    return nreads
-
-
 def run_nanosim(fasta, model_pre, output_pre, coverage, circ_or_linear, read_length_tuple, nthreads, seed=None):
-    fasta_length = get_fasta_length(fasta)
-    num_reads = str(compute_number_of_reads_to_simulate(coverage, fasta_length, model_mean_read_length))
+    fasta_length = utililties.get_fasta_length(fasta)
+    num_reads = str(utililties.compute_number_of_reads_to_simulate(coverage, fasta_length, model_mean_read_length))
 
     cmd = "simulator.py genome -rg {} -c {} -o {} -n {} -dna_type {} -t {} -b guppy --fastq".format(
         fasta, model_pre, output_pre, num_reads, circ_or_linear, str(nthreads))
