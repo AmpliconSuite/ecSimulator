@@ -53,7 +53,6 @@ def run_mason(fasta, mason_path, output_prefix, read_length, coverage, circ_or_l
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Call Mason to simulate nanopore reads from amplicon genome "
                                                  "structures and background genome regions.")
-    parser.add_argument("--mason_path", help="Path to Mason executable.", required=True)
     parser.add_argument("-o", "--output_prefix", help="Prefix for output filenames.", required=True)
     parser.add_argument("--amplicon_fasta", help="Fasta file of simulated amplicon structure.", required=True)
     parser.add_argument("--amplicon_coverage", type=float, help="Coverage for amplicon region - scale up to simulate "
@@ -67,6 +66,8 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--num_threads", type=int, help="Number of threads to use in all stages (default=1).",
                         default=1)
     parser.add_argument("--seed", help="Manually seed the pseudo-random number generator for the simulation.")
+    parser.add_argument("--mason_path", help="Custom path to Mason executable (mason_simulator).", default='mason_simulator')
+
     
     # Note: this parameter is not used for now.
     parser.add_argument("--amp_is_linear", action='store_true', help="Set if the simulated amplicon is linear instead"
@@ -78,12 +79,16 @@ if __name__ == '__main__':
 
     circular_or_linear = "linear" if args.amp_is_linear else "circular"
 
-    # set the nanopore read simulation model
+    # set the path of the mason read simulation tool
+    if not args.mason_path.endswith('mason_simulator') and args.mason_path != 'mason_simulator':
+        args.mason_path += "/mason_simulator"
+
     check_mason_path(args.mason_path)
 
     # simulate reads from the amplicon
     print("Simulating reads from amplicon...")
     amplicon_prefix = args.output_prefix + "_amplicon_reads"
+    background_prefix = args.output_prefix + "_background_reads"
     run_mason(
         args.amplicon_fasta,
         args.mason_path,
@@ -102,7 +107,7 @@ if __name__ == '__main__':
         run_mason(
             args.background_fasta,
             args.mason_path,
-            amplicon_background_prefixrefix,
+            background_prefix,
             args.read_length,
             args.background_coverage,
             "linear",

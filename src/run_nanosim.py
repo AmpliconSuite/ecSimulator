@@ -23,8 +23,8 @@ def extract_nanosim_model(model_path):
 
 
 def run_nanosim(fasta, model_pre, output_pre, coverage, circ_or_linear, read_length_tuple, nthreads, seed=None):
-    fasta_length = utilities.get_fasta_length(fasta)
-    num_reads = str(utilities.compute_number_of_reads_to_simulate(coverage, fasta_length, model_mean_read_length))
+    fasta_length = get_fasta_length(fasta)
+    num_reads = str(compute_number_of_reads_to_simulate(coverage, fasta_length, model_mean_read_length))
 
     cmd = "simulator.py genome -rg {} -c {} -o {} -n {} -dna_type {} -t {} -b guppy --fastq".format(
         fasta, model_pre, output_pre, num_reads, circ_or_linear, str(nthreads))
