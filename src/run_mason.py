@@ -35,7 +35,7 @@ def run_mason(fasta, mason_path, output_prefix, read_length, coverage, circ_or_l
         None. Call Mason to simulate data.
     """
     fasta_length = get_fasta_length(fasta)
-    num_reads = str(compute_number_of_reads_to_simulate(coverage, fasta_length, read_length))
+    num_reads = str(compute_number_of_reads_to_simulate(coverage, fasta_length, 2*read_length))
 
     R1 = f"{output_prefix}_R1.fastq.gz"
     R2 = f"{output_prefix}_R2.fastq.gz"
