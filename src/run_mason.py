@@ -8,7 +8,7 @@ from subprocess import call
 import os
 import sys
 
-from utilities import compute_number_of_reads_to_simulate, get_fasta_length
+from utilities import compute_number_of_reads_to_simulate, get_fasta_length, pseudocircularize_fasta
 
 
 def check_mason_path(mason_path=None):
@@ -17,7 +17,8 @@ def check_mason_path(mason_path=None):
         raise Exception("Cannot find Mason. Specify an existing file path for " 
                         " Mason.")
 
-def run_mason(fasta, mason_path, output_prefix, read_length, coverage, circ_or_linear, nthreads, seed=None):
+def run_mason(orig_fasta, mason_path, output_prefix, read_length, fragment_max_size, fragment_mean_size, fragment_size_std,
+              coverage, circ_or_linear, nthreads, seed=None):
     """Simulates short-read data with Mason.
 
     Args:
@@ -26,7 +27,7 @@ def run_mason(fasta, mason_path, output_prefix, read_length, coverage, circ_or_l
         output_prefix: Prefix for file path to write out simulated read data.
         read_length: Read length for simulated Illumina data (e.g., 150).
         coverage: Target coverage for amplicon.
-        circ_or_linear: Whether or not to simulate reads from a circular or
+        circ_or_linear: Whether to simulate reads from a circular or
             linear amplicon. (Note used currently.)
         nthreads: Number of threads to utilize.
         seed: Random seed to utilize.
@@ -34,13 +35,27 @@ def run_mason(fasta, mason_path, output_prefix, read_length, coverage, circ_or_l
     Returns:
         None. Call Mason to simulate data.
     """
+
+    if circ_or_linear == 'linear':
+        fasta = orig_fasta
+
+    elif circ_or_linear == "circular":
+        # modify the fasta (concatenate to itself 2*c times)
+        fasta = pseudocircularize_fasta(orig_fasta, coverage)
+        # reduce coverage to 0.5*c to account for extension of fasta length by 2
+        coverage *= 0.5
+
+    else:
+        raise Exception("Invalid value for circ_or_linear.")
+
     fasta_length = get_fasta_length(fasta)
-    num_reads = str(compute_number_of_reads_to_simulate(coverage, fasta_length, 2*read_length))
+    num_reads = str(compute_number_of_reads_to_simulate(coverage, fasta_length, 2 * read_length))
 
     R1 = f"{output_prefix}_R1.fastq.gz"
     R2 = f"{output_prefix}_R2.fastq.gz"
-    cmd = "{} -ir {} -n {} --illumina-read-length {} --seq-technology illumina --num-threads {} -o {} -or {}".format(
-        mason_path, fasta, num_reads, read_length, nthreads, R1, R2
+    cmd = ("{} -ir {} -n {} --illumina-read-length {} --fragment-max-size {} --fragment-mean-size {} --fragment-size-std-dev {} "
+           "--seq-technology illumina --num-threads {} -o {} -or {}").format(
+        mason_path, fasta, num_reads, read_length, fragment_max_size, fragment_mean_size, fragment_size_std, nthreads, R1, R2
     )
 
     if seed:
@@ -67,6 +82,14 @@ if __name__ == '__main__':
                         default=1)
     parser.add_argument("--seed", help="Manually seed the pseudo-random number generator for the simulation.")
     parser.add_argument("--mason_path", help="Custom path to Mason executable (mason_simulator).", default='mason_simulator')
+    parser.add_argument("--amp_is_linear", action='store_true', help="Set if the simulated amplicon is linear instead"
+                                                                     " of circular.")
+    parser.add_argument("--fragment_max_size", type=int, help="Largest fragment size to use when using uniform fragment size simulation."
+                                                              " In range [1..inf]", default="600")
+    parser.add_argument("--fragment_mean_size", type=int, help="Mean fragment size to use when using uniform fragment size simulation."
+                                                                 " In range [1..inf]", default="300")
+    parser.add_argument("--fragment_size_std_dev", type=int, help="Fragment size standard deviation when using normally distributed fragment size simulation."
+          " In range [1..inf].", default=100)
 
     
     # Note: this parameter is not used for now.
@@ -94,6 +117,9 @@ if __name__ == '__main__':
         args.mason_path,
         amplicon_prefix,
         args.read_length,
+        args.fragment_max_size,
+        args.fragment_mean_size,
+        args.fragment_size_std_dev,
         args.amplicon_coverage,
         circular_or_linear,
         args.num_threads,
@@ -109,6 +135,9 @@ if __name__ == '__main__':
             args.mason_path,
             background_prefix,
             args.read_length,
+            args.fragment_max_size,
+            args.fragment_mean_size,
+            args.fragment_size_std_dev,
             args.background_coverage,
             "linear",
             args.num_threads,
