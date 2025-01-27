@@ -6,14 +6,14 @@ of origin. Users can invoke a read simulator on the simulated structures to gene
 
 It takes as input a reference genome fasta and a yaml configuration file.
 
-The latest version of ecSimulator is **0.6.0**.
+The latest version of ecSimulator is **0.7.1**.
 
 ## Requirements and Installation
-### Basic requirements:
-ecSimulator requires python3 and the `numpy` and `intervaltree` python libraries.
+### Basic requirements
+ecSimulator requires python >=3 and the `numpy` and `intervaltree` python libraries.
 
 ```shell
-pip3 install numpy intervaltree  # or conda install intervaltree, etc.
+conda install numpy intervaltree  # or pip3 install numpy intervaltree
 git clone https://github.com/jluebeck/ecSimulator.git
 ```
 
@@ -35,10 +35,11 @@ ecSimulator also requires the AmpliconArchitect data repo to be present, which c
 A reference genome fasta file from which to extract genome sequences is also required.
 These are available in the [AmpliconArchitect data repo](https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/) for users who may already have that tool installed.
 
-### Optional dependencies for read simulation:
+### Optional dependencies for read simulation
+ecSimulator enables users to simulate reads from the resulting structures, using Nanopore or Illumina read simulators.
 
-ecSimulator allows users to simulate nanopore reads from the resulting structures, using [NanoSim](https://github.com/bcgsc/NanoSim).
-Nanosim can be installed by performing
+#### Nanopore: NanoSim
+[NanoSim](https://github.com/bcgsc/NanoSim) can be installed by running
 ```shell
 conda install -c bioconda nanosim
 ```
@@ -46,12 +47,21 @@ conda install -c bioconda nanosim
 We provide a pre-generated NanoSim read simulation model generated using input data from a Promethion with version 10.4.1 flow cell and Guppy as the basecaller (version dna_r10.4.1_e8.2_400bps_hac@v3.5.2).
 No additional configuration of the simulator is required by the user.
 
-### Computing requirements:
+
+#### Illumina: Mason2
+[Mason2](https://github.com/seqan/seqan/tree/main/apps/mason2) can be installed by running
+```shell
+conda install -c bioconda mason
+```
+
+
+
+### Computing requirements
 The memory an CPU requirements of ecSimulator are minimal, but please try to have more than 4Gb RAM available. The simulator should finish within 30s-1min for typical simulation runs.
-Simulating thousands of structures may take slightly longer.
+Simulating thousands of structures may take slightly longer. Read simulation is more resource intensive, and timing varies by the tool used and depth of coverage given.
 
 ## Usage
-### Focal amplification simulation:
+### Focal amplification simulation
 An example command to generate an ecDNA of episomal origin with at least two non-overlapping genomic segments
 with default SV frequencies:
 >`ecSimulator/src/ecSimulator.py --ref_name GRCh38 --ref_fasta /path/to/hg38.fa -o test`
@@ -59,10 +69,19 @@ with default SV frequencies:
 Or with customized simulation parameters:
 >`ecSimulator/src/ecSimulator.py --ref_name GRCh38 --ref_fasta /path/to/hg38.fa --config_file your_config.yaml -o test`
 
-### Nanopore read simulation:
+### Nanopore read simulation
 
-To simulate Nanopore reads from the simulated focal amplification (using NanoSim), you can do the following
->`ecSimulator/src/run_nanosim.py -o test_amplicon_1_read_sim --amplicon_fasta test_amplicon1.fasta --amplicon_coverage 1`
+To simulate Nanopore reads from the simulated focal amplification using NanoSim, you can do the following
+>`ecSimulator/src/run_nanosim.py -t [threads] -o test_amplicon_1_nanosim --amplicon_fasta test_amplicon1.fasta --amplicon_coverage 1`
+
+Check with `-h` to see other arguments for setting background regions, and adjusting other read simulation parameters.
+
+### Illumina read simulation
+To simulate Illumina reads from the simulated focal amplification using Mason, you can do the following
+>`ecSimulator/src/run_mason.py -t [threads] -o test_amplicon_1_mason --amplicon_fasta test_amplicon1.fasta --amplicon_coverage 1`
+
+Check with `-h` to see other arguments for setting background regions, and adjusting other read simulation parameters.
+
 
 ## Options
 ecSimulator takes the following command-line arguments:
@@ -120,8 +139,10 @@ This can be useful if you later want to create mixtures of heterogeneous but hig
 
 **Users can use the `cycles_file_to_fasta.py` script to convert any intermediate (or generally, any) AA-formatted `_cycles.txt` file to a fasta.**
 
-The Nanosim process will create two fastq files (aligned.fastq and unaligned.fastq) and a file describing the locations of the errors in the reads. A complete description of these files is available [here](https://github.com/bcgsc/NanoSim#2-simulation-stage-1).
+### NanoSim outputs
 
-To combine the background and amplicon fastq files, users an simply do
+The NanoSim process will create two fastq files (aligned.fastq and unaligned.fastq) and a file describing the locations of the errors in the reads. A complete description of these files is available [here](https://github.com/bcgsc/NanoSim#2-simulation-stage-1).
+
+To combine the background and amplicon fastq files, users can simply do
 >`cat [sample]_amplicon_unaligned_reads.fastq [sample]_amplicon_aligned_reads.fastq
 [sample]_background_unaligned_reads.fastq [sample]_background_aligned_reads.fastq`
