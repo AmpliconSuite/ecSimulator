@@ -161,7 +161,7 @@ def write_bpg_file(bp_intervals, amplicon, outname, isCircular, write_dt):
 
             posString1 = e[0].chrom + ":" + str(e[0].pos) + e[2][0]
             posString2 = e[1].chrom + ":" + str(e[1].pos) + e[2][1]
-            posPair = posString1 + "->" + posString2 + "\t"
+            posPair = posString1 + "->" + posString2
             outfields+=[posPair, str(float(count)), str(count), "None", "None"]
             outstring = "\t".join(outfields) + "\n"
             outfile.write(outstring)

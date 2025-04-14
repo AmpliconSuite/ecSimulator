@@ -6,7 +6,7 @@ from itertools import groupby
 
 """
 Jens Luebeck
-UC San Diego, Bioinformatics & Systems Biology
+UC San Diego, Department of Computer Science
 jluebeck@ucsd.edu
 """
 
