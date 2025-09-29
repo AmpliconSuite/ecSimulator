@@ -42,8 +42,8 @@ def run_mason(orig_fasta, mason_path, output_prefix, read_length, fragment_max_s
     elif circ_or_linear == "circular":
         # modify the fasta (concatenate to itself 2*c times)
         fasta = pseudocircularize_fasta(orig_fasta, coverage)
-        # reduce coverage to 0.5*c to account for extension of fasta length by 2
-        coverage *= 0.5
+        # reduce coverage to 1 to account for extension of fasta length by c times
+        coverage /= int(ceil(coverage))
 
     else:
         raise Exception("Invalid value for circ_or_linear.")
