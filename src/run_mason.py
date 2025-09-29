@@ -43,6 +43,9 @@ def run_mason(orig_fasta, mason_path, output_prefix, read_length, fragment_max_s
         # modify the fasta (concatenate to itself 2*c times)
         fasta = pseudocircularize_fasta(orig_fasta, coverage)
         # reduce coverage to 1 to account for extension of fasta length by c times
+        if coverage < 2:
+            coverage *= 0.5  # we made at least two copies of the sequence when cyclizing and need to handle the additional material
+
         coverage /= int(ceil(coverage))
 
     else:

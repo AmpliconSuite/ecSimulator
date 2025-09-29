@@ -22,7 +22,7 @@ def pseudocircularize_fasta(fasta, coverage):
     # writes a new fasta and return the path of that file
     base, ext = os.path.splitext(fasta)
     output_fasta = f"{base}_circularized{ext}"
-    c = int(ceil(coverage))
+    c = max(2, int(ceil(coverage)))
     with open(fasta, 'r') as infile, open(output_fasta, 'w') as outfile:
         seq_name = ""
         seq_data = ""
