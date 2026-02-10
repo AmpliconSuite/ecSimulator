@@ -8,20 +8,25 @@ It takes as input a reference genome fasta and a yaml configuration file.
 
 The latest version of ecSimulator is **0.7.1**.
 
+## Example real and simulated ecDNA
+![Example ecDNA](images/simulated_ecDNA.png)
+
 ## Requirements and Installation
-### Basic requirements
 ecSimulator requires python >=3 and the `numpy` and `intervaltree` python libraries.
 
 ```shell
-conda install numpy intervaltree  # or pip3 install numpy intervaltree
+conda create -n ecsimulator
+conda activate ecsimulator
+conda install numpy intervaltree
 git clone https://github.com/jluebeck/ecSimulator.git
 ```
 
-ecSimulator also requires the AmpliconArchitect data repo to be present, which contains reference genome builds and genome annotations. 
+ecSimulator also requires the AmpliconArchitect data repo to be present, which contains reference genome builds and genome annotations.
 
+If you already have AmpliconSuite-pipeline installed you likely do not need to do this. 
 - Download AA data repositories and set environment variable AA_DATA_REPO:
   1. Go [here](https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/) to locate data repo(s) of your choice and make note of the URL you want.
-  2. Wget and set a bash environment variable AA_DATA_REPO to point to the data_repo directory:
+  2. Wget the .tar.gz, and set a bash environment variable AA_DATA_REPO to point to the data_repo directory:
       ```bash
       mkdir data_repo && cd data_repo
       wget [url of reference_build]
